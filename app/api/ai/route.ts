@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getModelConfig, systemPrompts } from './config';
 
 // Initialize OpenAI client with API key from environment variables
 const openai = new OpenAI({
@@ -10,20 +11,26 @@ export async function POST(request: NextRequest) {
   try {
     const { messages, model = 'gpt-4o-mini', editorContent } = await request.json();
 
+    const modelConfig = getModelConfig(model);
+    
+    if (!modelConfig) {
+      return NextResponse.json(
+        { error: `Model ${model} not supported` },
+        { status: 400 }
+      );
+    }
+
     // Handle different model providers
-    if (model.startsWith('gpt')) {
+    if (modelConfig.provider === 'openai') {
       // OpenAI API call
       const response = await openai.chat.completions.create({
         model,
         messages: [
           {
             role: 'system',
-            content: `You are an AI writing assistant helping a user write their newsletter. 
-            The current content of their editor is: ${editorContent}
+            content: `${systemPrompts.newsletter}
             
-            When asked to modify content, provide specific changes to make to the editor.
-            When asked to generate new content, provide complete sections ready to be inserted.
-            Be helpful, concise, and creative.`
+            The current content of their editor is: ${editorContent}`
           },
           ...messages
         ],
@@ -37,7 +44,7 @@ export async function POST(request: NextRequest) {
         edits: extractEditorEdits(response.choices[0].message.content)
       });
     } 
-    else if (model.startsWith('gemini')) {
+    else if (modelConfig.provider === 'google') {
       // For Gemini, we'd need to use Google's API
       // This is a placeholder implementation
       // In a real implementation, you would import and use the Google Generative AI library
@@ -57,12 +64,12 @@ export async function POST(request: NextRequest) {
       });
     } 
     else {
-      throw new Error(`Unsupported model: ${model}`);
+      throw new Error(`Unsupported provider: ${modelConfig.provider}`);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI API error:', error);
     return NextResponse.json(
-      { error: 'Failed to process your request' },
+      { error: error.message || 'Failed to process your request' },
       { status: 500 }
     );
   }
