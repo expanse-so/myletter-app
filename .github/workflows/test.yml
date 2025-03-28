@@ -28,20 +28,36 @@ jobs:
     - name: Run tests
       id: run_tests
       run: |
-        npm test
-        echo "result=success" >> $GITHUB_OUTPUT
+        npm test || echo "Tests failed but continuing"
+        echo "result=$(npm test > /dev/null 2>&1 && echo 'success' || echo 'failure')" >> $GITHUB_OUTPUT
       continue-on-error: true
       env:
         CI: true
       
     - name: Generate coverage report
-      run: npm run test:coverage
+      run: |
+        mkdir -p coverage
+        npm run test:coverage || echo "Coverage generation failed but continuing"
+      continue-on-error: true
       
+    - name: Check if coverage directory exists
+      id: check_coverage
+      run: |
+        if [ -d "coverage" ] && [ "$(ls -A coverage)" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          # Create a basic file so the artifact upload doesn't fail
+          mkdir -p coverage
+          echo "# Coverage report not generated" > coverage/README.md
+        fi
+        
     - name: Upload coverage report
       uses: actions/upload-artifact@v3
       with:
         name: coverage-report
         path: coverage/
+        if-no-files-found: warn
         
     - name: Comment on PR
       if: github.event_name == 'issue_comment'
@@ -50,9 +66,10 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const testResult = "${{ steps.run_tests.outputs.result }}" == "success" ? "✅ Tests passed!" : "❌ Tests failed!";
+          const coverageExists = "${{ steps.check_coverage.outputs.exists }}" == "true" ? "✅ Coverage report generated" : "⚠️ Coverage report not generated";
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
-            body: `## Test Results\n\n${testResult}\n\nRun ID: ${context.runId}\nRun URL: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            body: `## Test Results\n\n${testResult}\n${coverageExists}\n\nRun ID: ${context.runId}\nRun URL: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
           })
