@@ -356,7 +356,16 @@ function processNodesAsPlainText(nodes: JSONContent[], level: number = 0): strin
         break;
       
       case 'listItem':
-        let prefix = node.type === 'bulletList' ? '* ' : `${level + 1}. `;
+        // Determine if this list item is part of a bullet list or ordered list
+        // We can't check node.type for this (they're all 'listItem'),
+        // so we'll use a simple heuristic: level + 1 for ordered lists, bullet for others
+        let prefix = '* '; // Default to bullet
+        
+        // Parent node type isn't directly available, but we can infer from context
+        if (node.attrs?.listType === 'ordered') {
+          prefix = `${level + 1}. `;
+        }
+        
         lines.push(`${indent}${prefix}${processNodesAsPlainText(node.content || [], level + 1)}`);
         break;
       
