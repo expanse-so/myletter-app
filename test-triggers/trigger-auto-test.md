@@ -25,7 +25,7 @@ curl -X POST \
 Simply modify this file (even just adding a timestamp below) and commit to trigger a new test run.
 
 ## Latest Test Run Trigger
-Timestamp: 2025-03-28T21:24:00Z  
+Timestamp: 2025-03-28T21:25:30Z  
 
 This workflow will now run with the following test files:
 1. ModelSelector.test.js
@@ -40,4 +40,4 @@ All tests have been properly configured with:
 - Updated package.json with test dependencies
 - API implementation in utils/api.ts
 
-The workflow has been fixed to include the missing upload-artifact action, which should resolve the previous error.
+The workflow has been updated to use actions/upload-artifact@v4 instead of the deprecated v3 version.
