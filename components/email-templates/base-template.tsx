@@ -119,7 +119,7 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
           margin: 0,
           padding: 0,
           WebkitFontSmoothing: 'antialiased',
-          msTextSizeAdjust: '100%',
+          textSizeAdjust: '100%',
           WebkitTextSizeAdjust: '100%',
         }}
       >
