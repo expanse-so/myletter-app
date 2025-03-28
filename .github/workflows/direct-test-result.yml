@@ -23,18 +23,19 @@ jobs:
       
     - name: Run tests with output capture
       run: |
-        npm test || true
-        echo "TEST_OUTPUT<<EOF" >> $GITHUB_ENV
-        cat test-output.txt >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
-      
-    - name: Create results file
+        mkdir -p test-results
+        npm test > test-results/output.txt 2>&1 || true
+        
+    - name: Create detailed results
       run: |
-        echo "${{ env.TEST_OUTPUT }}" > test-results.md
+        echo "# Test Results" > test-results/report.md
+        echo "\`\`\`" >> test-results/report.md
+        cat test-results/output.txt >> test-results/report.md
+        echo "\`\`\`" >> test-results/report.md
       
     - name: Commit and push test results
       uses: EndBug/add-and-commit@v9
       with:
-        add: 'test-results.md'
-        message: 'Add test results'
+        add: 'test-results'
+        message: 'Add concrete test results'
         push: true
