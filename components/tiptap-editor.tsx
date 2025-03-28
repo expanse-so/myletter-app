@@ -6,6 +6,11 @@ import Heading from '@tiptap/extension-heading'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import { useCallback, useEffect } from 'react'
 import { Button } from './ui/button'
 import { 
   Bold, 
@@ -17,19 +22,27 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   Undo,
-  Redo
+  Redo,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Table as TableIcon
 } from 'lucide-react'
 
 interface TipTapEditorProps {
   initialContent?: string
   onChange?: (html: string) => void
   placeholder?: string
+  editable?: boolean
+  className?: string
 }
 
 export function TipTapEditor({ 
   initialContent = '<h1>My Newsletter</h1><p>Start writing your amazing content...</p>', 
   onChange,
-  placeholder = 'Write something amazing...'
+  placeholder = 'Write something amazing...',
+  editable = true,
+  className = ''
 }: TipTapEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -37,26 +50,76 @@ export function TipTapEditor({
       Heading.configure({
         levels: [1, 2, 3],
       }),
-      Image,
+      Image.configure({
+        HTMLAttributes: {
+          class: 'mx-auto my-4 rounded-md max-w-full',
+        },
+      }),
       Link.configure({
         openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-primary underline',
+        },
       }),
       Placeholder.configure({
         placeholder,
       }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML())
     },
+    editable,
   })
+
+  useEffect(() => {
+    if (editor && initialContent && !editor.getText()) {
+      editor.commands.setContent(initialContent)
+    }
+  }, [editor, initialContent])
+
+  const addImage = useCallback(() => {
+    const url = window.prompt('URL')
+    if (url && editor) {
+      editor.chain().focus().setImage({ src: url }).run()
+    }
+  }, [editor])
+
+  const setLink = useCallback(() => {
+    const previousUrl = editor?.getAttributes('link').href
+    const url = window.prompt('URL', previousUrl)
+    
+    // cancelled
+    if (url === null) {
+      return
+    }
+
+    // empty
+    if (url === '') {
+      editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+      return
+    }
+
+    // update link
+    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  }, [editor])
+
+  const addTable = useCallback(() => {
+    editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  }, [editor])
 
   if (!editor) {
     return <div>Loading editor...</div>
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full border rounded-lg ${className}`}>
       <div className="border-b p-2 flex flex-wrap gap-1">
         <Button
           variant="ghost"
@@ -115,12 +178,7 @@ export function TipTapEditor({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => {
-            const url = window.prompt('URL')
-            if (url) {
-              editor.chain().focus().setLink({ href: url }).run()
-            }
-          }}
+          onClick={setLink}
           className={editor.isActive('link') ? 'bg-muted' : ''}
           title="Link"
         >
@@ -129,15 +187,45 @@ export function TipTapEditor({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => {
-            const url = window.prompt('Image URL')
-            if (url) {
-              editor.chain().focus().setImage({ src: url }).run()
-            }
-          }}
+          onClick={addImage}
           title="Image"
         >
           <ImageIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={addTable}
+          title="Insert Table"
+        >
+          <TableIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          className={editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}
+          title="Align Left"
+        >
+          <AlignLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          className={editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}
+          title="Align Center"
+        >
+          <AlignCenter className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          className={editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}
+          title="Align Right"
+        >
+          <AlignRight className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -159,7 +247,7 @@ export function TipTapEditor({
         </Button>
       </div>
       <div className="flex-1 overflow-auto">
-        <EditorContent editor={editor} className="p-4 min-h-[300px] prose prose-sm max-w-none" />
+        <EditorContent editor={editor} className="p-4 min-h-full prose prose-sm max-w-none" />
       </div>
     </div>
   )
