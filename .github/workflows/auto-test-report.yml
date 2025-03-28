@@ -12,6 +12,7 @@ on:
       - 'package.json'
       - 'jest.config.js'
       - 'tsconfig.json'
+      - 'test-triggers/**'
 
 jobs:
   test-and-report:
@@ -115,8 +116,13 @@ ${summary.testResults
 
 ${r.errors.length > 0 
   ? r.errors.map(e => typeof e === "string" 
-    ? `\`\`\`\n${e}\n\`\`\`` 
-    : `- **${e.title}**\n\`\`\`\n${e.failureMessages.join("\n")}\n\`\`\``
+    ? `\`\`\`
+${e}
+\`\`\`` 
+    : `- **${e.title}**
+\`\`\`
+${e.failureMessages.join("\n")}
+\`\`\``
   ).join("\n") 
   : "No detailed error information available"}
 `).join("\n") || "No failed tests"}
@@ -151,6 +157,12 @@ ${summary.testResults
           '
           
           echo "Test processing complete."
+      
+      - name: Upload test results as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results/
           
       - name: Show test summary
         run: |
