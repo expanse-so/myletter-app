@@ -7,6 +7,9 @@ export default function Home() {
         <div className="container flex justify-between items-center">
           <div className="text-2xl font-bold">MyLetter</div>
           <nav className="space-x-4">
+            <Link href="/editor" className="text-primary hover:underline">
+              Try Editor
+            </Link>
             <Link href="/login" className="text-primary hover:underline">
               Login
             </Link>
@@ -31,12 +34,18 @@ export default function Home() {
               Create exceptional newsletters with AI assistance in a clean, 
               distraction-free environment designed for content creators who value simplicity.
             </p>
-            <div className="mt-10">
+            <div className="mt-10 flex justify-center space-x-4">
               <Link
                 href="/signup"
                 className="bg-primary text-primary-foreground py-3 px-6 rounded-md hover:bg-primary/90 text-lg font-medium"
               >
                 Get Started for Free
+              </Link>
+              <Link
+                href="/editor"
+                className="bg-muted text-foreground py-3 px-6 rounded-md hover:bg-muted/90 text-lg font-medium border border-border"
+              >
+                Try the Editor
               </Link>
             </div>
           </div>
