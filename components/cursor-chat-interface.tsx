@@ -1,16 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { sendMessageToAI } from '../utils/api';
 
 interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+  sender: 'user' | 'ai';
+  text: string;
 }
 
 interface CursorChatInterfaceProps {
-  onApplyContent: (content: string) => void;
+  initialMessages?: Message[];
+  onSendMessage: (message: string) => void;
+  onSelectContent: (content: string) => void;
 }
 
-export function CursorChatInterface({ onApplyContent }: CursorChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export function CursorChatInterface({ 
+  initialMessages = [], 
+  onSendMessage, 
+  onSelectContent 
+}: CursorChatInterfaceProps) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +31,11 @@ export function CursorChatInterface({ onApplyContent }: CursorChatInterfaceProps
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
 
+    // Call the onSendMessage prop
+    onSendMessage(currentMessage);
+
     // Add user message to chat
-    const userMessage: Message = { role: 'user', content: currentMessage };
+    const userMessage: Message = { sender: 'user', text: currentMessage };
     setMessages((prev) => [...prev, userMessage]);
     setCurrentMessage('');
     setIsLoading(true);
@@ -33,26 +43,16 @@ export function CursorChatInterface({ onApplyContent }: CursorChatInterfaceProps
 
     try {
       // Call AI API
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage],
-          model: 'gpt-4o-mini', // Default model
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get AI response');
+      const response = await sendMessageToAI(currentMessage);
+      
+      if (response.error) {
+        throw new Error(response.error);
       }
 
-      const data = await response.json();
-
-      // Add AI response to chat
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.text }]);
+      if (response.text) {
+        // Add AI response to chat
+        setMessages((prev) => [...prev, { sender: 'ai', text: response.text }]);
+      }
     } catch (err) {
       setError(`Error: ${err.message}`);
       console.error('Error sending message:', err);
@@ -68,25 +68,24 @@ export function CursorChatInterface({ onApplyContent }: CursorChatInterfaceProps
     }
   };
 
-  const handleApplyContent = (content: string) => {
-    onApplyContent(content);
-  };
-
   return (
     <div className="chat-interface">
       <div className="messages-container">
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`message ${message.role}`}
-            onClick={() => message.role === 'assistant' && handleApplyContent(message.content)}
+            className={`message ${message.sender}`}
+            onClick={() => message.sender === 'ai' && onSelectContent(message.text)}
           >
-            <div className="message-content">{message.content}</div>
+            <div className="message-content">
+              {message.sender === 'user' ? 'You: ' : 'AI: '}
+              {message.text}
+            </div>
           </div>
         ))}
         {isLoading && (
-          <div className="message assistant">
-            <div className="message-content">Thinking...</div>
+          <div className="message ai">
+            <div className="message-content">AI is thinking...</div>
           </div>
         )}
         {error && (
