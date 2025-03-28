@@ -5,11 +5,14 @@ on:
     branches: [ main, develop, feature/testing-implementation ]
   pull_request:
     branches: [ main, develop ]
+  issue_comment:
+    types: [created]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    if: github.event_name != 'issue_comment' || github.event.comment.body == '/test'
+    
     steps:
     - uses: actions/checkout@v3
     
@@ -23,7 +26,11 @@ jobs:
       run: npm ci
       
     - name: Run tests
-      run: npm test
+      id: run_tests
+      run: |
+        npm test
+        echo "result=success" >> $GITHUB_OUTPUT
+      continue-on-error: true
       env:
         CI: true
       
@@ -35,3 +42,17 @@ jobs:
       with:
         name: coverage-report
         path: coverage/
+        
+    - name: Comment on PR
+      if: github.event_name == 'issue_comment'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const testResult = "${{ steps.run_tests.outputs.result }}" == "success" ? "✅ Tests passed!" : "❌ Tests failed!";
+          github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: `## Test Results\n\n${testResult}\n\nRun ID: ${context.runId}\nRun URL: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+          })
