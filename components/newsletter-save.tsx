@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { debounce } from '@/lib/utils';
 
 interface NewsletterSaveProps {
@@ -25,7 +25,6 @@ export function NewsletterSave({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
   
   const saveNewsletter = async () => {
     if (!content || !title) return;
