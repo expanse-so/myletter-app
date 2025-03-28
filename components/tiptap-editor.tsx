@@ -1,6 +1,6 @@
 "use client"
 
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
@@ -34,6 +34,7 @@ interface TipTapEditorProps {
   placeholder?: string
   editable?: boolean
   className?: string
+  onEditorReady?: (editor: Editor) => void
 }
 
 export function TipTapEditor({ 
@@ -41,7 +42,8 @@ export function TipTapEditor({
   onChange,
   placeholder = 'Write something amazing...',
   editable = true,
-  className = ''
+  className = '',
+  onEditorReady
 }: TipTapEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -81,6 +83,12 @@ export function TipTapEditor({
       editor.commands.setContent(initialContent)
     }
   }, [editor, initialContent])
+
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor)
+    }
+  }, [editor, onEditorReady])
 
   const addImage = useCallback(() => {
     const url = window.prompt('URL')
