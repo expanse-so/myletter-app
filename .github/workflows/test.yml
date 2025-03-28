@@ -1,0 +1,120 @@
+name: Test-Driven Development
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        id: run-tests
+        run: npm test
+        continue-on-error: true
+      
+      - name: Process test results
+        id: process-results
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const testOutput = process.env.TEST_OUTPUT || 'No test output available';
+            const testPassed = ${{ steps.run-tests.outcome == 'success' }};
+            
+            const summary = `
+            # Test Results
+            
+            Status: ${testPassed ? '✅ PASSED' : '❌ FAILED'}
+            
+            ## Details
+            
+            \`\`\`
+            ${testOutput}
+            \`\`\`
+            `;
+            
+            // Write to job summary
+            await core.summary
+              .addRaw(summary)
+              .write();
+              
+            // Save output for API access
+            core.setOutput('results', {
+              passed: testPassed,
+              output: testOutput
+            });
+        env:
+          TEST_OUTPUT: ${{ steps.run-tests.outputs.stdout || steps.run-tests.outputs.stderr }}
+      
+      - name: Post results as comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { issue: { number: issue_number }, repo: { owner, repo } } = context;
+            const testPassed = ${{ steps.run-tests.outcome == 'success' }};
+            const testOutput = process.env.TEST_OUTPUT || 'No test output available';
+            
+            const body = `
+            # Test Results
+            
+            Status: ${testPassed ? '✅ PASSED' : '❌ FAILED'}
+            
+            <details>
+            <summary>View test output</summary>
+            
+            \`\`\`
+            ${testOutput}
+            \`\`\`
+            </details>
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number,
+              owner,
+              repo,
+              body
+            });
+        env:
+          TEST_OUTPUT: ${{ steps.run-tests.outputs.stdout || steps.run-tests.outputs.stderr }}
+      
+      # Create an API endpoint for accessing test results programmatically
+      - name: Store test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results.json
+          retention-days: 1
+        
+      # Generate test results file for API access
+      - name: Generate test results JSON
+        if: always()
+        run: |
+          echo '{
+            "passed": ${{ steps.run-tests.outcome == 'success' }},
+            "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+            "run_id": "${{ github.run_id }}",
+            "run_number": "${{ github.run_number }}",
+            "commit_sha": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}"
+          }' > test-results.json
