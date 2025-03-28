@@ -13,6 +13,7 @@ import { ChatMessageList } from "@/components/ui/chat-message-list"
 import { ModelSelector } from "@/components/ui/model-selector"
 import { cn } from "@/lib/utils"
 import { Editor } from '@tiptap/react'
+import { getProviderModels } from "@/app/api/ai/config"
 
 interface Message {
   id: number
@@ -26,6 +27,7 @@ export interface AIChatInterfaceProps {
   initialMessages?: Message[]
   editor?: Editor | null
   editorContent?: string
+  onEditorReady?: (isReady: boolean) => void
 }
 
 export function AIChatInterface({
@@ -39,18 +41,43 @@ export function AIChatInterface({
   ],
   editor,
   editorContent = "",
+  onEditorReady,
 }: AIChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState("gpt-4o-mini")
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  
+  // Get available models
+  const openAIOptions = getProviderModels("openai").map(model => ({
+    value: model.id,
+    label: model.name
+  }));
+  
+  const geminiOptions = getProviderModels("google").map(model => ({
+    value: model.id,
+    label: model.name
+  }));
 
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus()
     }
   }, [])
+  
+  // Notify parent when ready
+  useEffect(() => {
+    if (onEditorReady) {
+      onEditorReady(true);
+    }
+    
+    return () => {
+      if (onEditorReady) {
+        onEditorReady(false);
+      }
+    };
+  }, [onEditorReady]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -126,7 +153,7 @@ export function AIChatInterface({
     // This is a simplified implementation - in a real app, you would have more sophisticated
     // parsing and application of edits based on AI's response
     if (operation === 'replace') {
-      const regex = /Replace "(.*)" with "(.*?)"/;
+      const regex = /Replace \"(.*)\" with \"(.*?)\"/;
       const match = messageContent.match(regex);
       
       if (match && match.length >= 3) {
@@ -151,7 +178,7 @@ export function AIChatInterface({
       
       editor.chain().focus().createParagraphNear().insertContent(contentToAdd).run();
     } else if (operation === 'delete') {
-      const regex = /Delete "(.*?)"/;
+      const regex = /Delete \"(.*?)\"/;
       const match = messageContent.match(regex);
       
       if (match && match.length >= 2) {
@@ -168,8 +195,10 @@ export function AIChatInterface({
       <div className="border-b p-3 flex justify-between items-center">
         <h3 className="font-medium">AI Assistant</h3>
         <ModelSelector 
-          selectedModel={selectedModel} 
-          onModelChange={setSelectedModel} 
+          openAIOptions={openAIOptions}
+          geminiOptions={geminiOptions}
+          value={selectedModel}
+          onValueChange={setSelectedModel}
         />
       </div>
       
