@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { vi, beforeAll, afterAll } from 'vitest';
 
 // Mock Next.js router
 vi.mock('next/router', () => ({
