@@ -9,6 +9,7 @@ import {
 import { TipTapEditor } from "./tiptap-editor"
 import { AIChatInterface } from "./ai-chat-interface"
 import { Editor } from '@tiptap/react'
+import { JSONContent } from '@tiptap/core'
 
 interface SplitViewLayoutProps {
   children?: React.ReactNode
@@ -16,7 +17,7 @@ interface SplitViewLayoutProps {
   defaultChatSize?: number
   editorContent?: React.ReactNode
   initialContent?: string
-  onEditorChange?: (html: string) => void
+  onEditorChange?: (html: string, json?: JSONContent) => void
 }
 
 export function SplitViewLayout({
@@ -28,11 +29,15 @@ export function SplitViewLayout({
   onEditorChange,
 }: SplitViewLayoutProps) {
   const [editorHtml, setEditorHtml] = useState(initialContent || '<h1>My Newsletter</h1><p>Start writing your amazing content...</p>')
+  const [editorJson, setEditorJson] = useState<JSONContent | undefined>()
   const editorRef = useRef<Editor | null>(null)
   
-  const handleEditorChange = (html: string) => {
+  const handleEditorChange = (html: string, json?: JSONContent) => {
     setEditorHtml(html)
-    onEditorChange?.(html)
+    if (json) {
+      setEditorJson(json)
+    }
+    onEditorChange?.(html, json)
   }
   
   const handleEditorReady = (editor: Editor) => {
