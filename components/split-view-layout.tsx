@@ -1,69 +1,119 @@
-"use client"
+import React, { useState, useEffect, useRef } from 'react';
+import { TipTapEditor } from './tiptap-editor';
+import { CursorChatInterface } from './cursor-chat-interface';
 
-import React, { useState, useRef } from "react"
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import { TipTapEditor } from "./tiptap-editor"
-import { AIChatInterface } from "./ai-chat-interface"
-import { Editor } from '@tiptap/react'
+export function SplitViewLayout() {
+  // State for the ratio between left and right panels
+  const [leftPanelFlex, setLeftPanelFlex] = useState(2);
+  const [rightPanelFlex, setRightPanelFlex] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [editorContent, setEditorContent] = useState('<p>Welcome to MyLetter!</p>');
 
-interface SplitViewLayoutProps {
-  children?: React.ReactNode
-  defaultEditorSize?: number
-  defaultChatSize?: number
-  editorContent?: React.ReactNode
-  initialContent?: string
-  onEditorChange?: (html: string) => void
-}
+  // Handle divider dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
-export function SplitViewLayout({
-  children,
-  defaultEditorSize = 60,
-  defaultChatSize = 40,
-  editorContent,
-  initialContent,
-  onEditorChange,
-}: SplitViewLayoutProps) {
-  const [editorHtml, setEditorHtml] = useState(initialContent || '<h1>My Newsletter</h1><p>Start writing your amazing content...</p>')
-  const editorRef = useRef<Editor | null>(null)
-  
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerWidth = containerRect.width;
+      const mouseX = e.clientX - containerRect.left;
+      
+      // Calculate new flex values
+      const leftFlex = mouseX / (containerWidth - mouseX);
+      
+      // Ensure minimum panel sizes (around 20%)
+      const minFlex = 0.25;
+      if (leftFlex > minFlex && 1/leftFlex > minFlex) {
+        setLeftPanelFlex(leftFlex * rightPanelFlex);
+        setRightPanelFlex(rightPanelFlex);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, rightPanelFlex]);
+
+  // Handle sending message from chat interface
+  const handleSendMessage = (message: string) => {
+    // Process the message - in a real app this would likely interact with an API
+    console.log('Message sent:', message);
+  };
+
+  // Handle applying content from AI to editor
+  const handleSelectContent = (content: string) => {
+    setEditorContent(content);
+  };
+
+  // Handle editor content changes
   const handleEditorChange = (html: string) => {
-    setEditorHtml(html)
-    onEditorChange?.(html)
-  }
-  
-  const handleEditorReady = (editor: Editor) => {
-    editorRef.current = editor
-  }
+    setEditorContent(html);
+  };
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal"
-      className="min-h-[calc(100vh-10rem)] max-h-[calc(100vh-10rem)] rounded-lg border"
+    <div 
+      className="split-view-container" 
+      ref={containerRef}
+      data-testid="split-view-container"
+      style={{ 
+        display: 'flex',
+        height: '100vh'
+      }}
     >
-      <ResizablePanel defaultSize={defaultEditorSize} minSize={30}>
-        <div className="flex h-full flex-col bg-background">
-          {editorContent || (
-            <TipTapEditor 
-              initialContent={editorHtml}
-              onChange={handleEditorChange}
-              placeholder="Write your newsletter here..."
-              className="h-full"
-              onEditorReady={handleEditorReady}
-            />
-          )}
-        </div>
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={defaultChatSize} minSize={30}>
-        <AIChatInterface
-          editor={editorRef.current}
-          editorContent={editorHtml}
+      <div 
+        data-testid="left-panel"
+        className="left-panel" 
+        style={{ 
+          flex: leftPanelFlex.toString(),
+          overflow: 'auto'
+        }}
+      >
+        <TipTapEditor 
+          initialContent={editorContent} 
+          onChange={handleEditorChange}
         />
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  )
+      </div>
+      
+      <div 
+        data-testid="panel-resizer"
+        className="resizer" 
+        onMouseDown={handleMouseDown}
+        style={{ 
+          cursor: 'col-resize',
+          width: '4px',
+          background: '#e5e7eb'
+        }}
+      />
+      
+      <div 
+        data-testid="right-panel"
+        className="right-panel" 
+        style={{ 
+          flex: rightPanelFlex.toString(),
+          overflow: 'auto'
+        }}
+      >
+        <CursorChatInterface 
+          onSendMessage={handleSendMessage}
+          onSelectContent={handleSelectContent}
+        />
+      </div>
+    </div>
+  );
 }

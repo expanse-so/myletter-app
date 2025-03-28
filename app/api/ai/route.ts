@@ -1,101 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { getModelConfig, systemPrompts } from './config';
-
-// Initialize OpenAI client with API key from environment variables
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, model = 'gpt-4o-mini', editorContent } = await request.json();
+    const { messages, model } = await request.json();
 
-    const modelConfig = getModelConfig(model);
+    // Validate input
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json({ error: 'Invalid messages format' }, { status: 400 });
+    }
+
+    if (!model) {
+      return NextResponse.json({ error: 'Model must be specified' }, { status: 400 });
+    }
+
+    // Check API keys depending on the model
+    const isOpenAIModel = model.includes('gpt');
+    const isAnthropicModel = model.includes('claude');
+
+    if (isOpenAIModel && !process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OpenAI API key is not configured' }, { status: 500 });
+    }
+
+    if (isAnthropicModel && !process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: 'Anthropic API key is not configured' }, { status: 500 });
+    }
+
+    // Send request to the appropriate API
+    let apiResponse;
     
-    if (!modelConfig) {
+    if (isOpenAIModel) {
+      apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.7,
+          max_tokens: 1000
+        })
+      });
+    } else if (isAnthropicModel) {
+      apiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 1000
+        })
+      });
+    }
+
+    if (!apiResponse?.ok) {
+      const errorData = await apiResponse.json();
       return NextResponse.json(
-        { error: `Model ${model} not supported` },
-        { status: 400 }
+        { error: errorData.error || 'Failed to generate response' },
+        { status: apiResponse.status }
       );
     }
 
-    // Handle different model providers
-    if (modelConfig.provider === 'openai') {
-      // OpenAI API call
-      const response = await openai.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: `${systemPrompts.newsletter}
-            
-            The current content of their editor is: ${editorContent}`
-          },
-          ...messages
-        ],
-        temperature: 0.7,
-      });
-
-      return NextResponse.json({
-        response: response.choices[0].message.content,
-        model,
-        provider: 'openai',
-        edits: extractEditorEdits(response.choices[0].message.content)
-      });
-    } 
-    else if (modelConfig.provider === 'google') {
-      // For Gemini, we'd need to use Google's API
-      // This is a placeholder implementation
-      // In a real implementation, you would import and use the Google Generative AI library
-      
-      // Simulate a Gemini response
-      const simulatedResponse = `I've analyzed your newsletter content and have some suggestions.
-      
-      You could improve the introduction by making it more personal. Try something like:
-      
-      "Welcome to the latest edition of MyLetter, where we explore [your topic]! I'm excited to share with you..."`;
-      
-      return NextResponse.json({
-        response: simulatedResponse,
-        model,
-        provider: 'google',
-        edits: extractEditorEdits(simulatedResponse)
-      });
-    } 
-    else {
-      throw new Error(`Unsupported provider: ${modelConfig.provider}`);
+    const data = await apiResponse.json();
+    
+    // Format response based on provider
+    let responseText;
+    if (isOpenAIModel) {
+      responseText = data.choices[0].message.content;
+    } else if (isAnthropicModel) {
+      responseText = data.content[0].text;
     }
-  } catch (error: any) {
+
+    return NextResponse.json({
+      text: responseText,
+      done: true
+    });
+  } catch (error) {
     console.error('AI API error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to process your request' },
+      { error: `Error generating AI response: ${error.message}` },
       { status: 500 }
     );
   }
-}
-
-// Helper function to extract potential editor edits from AI response
-function extractEditorEdits(response: string | null | undefined) {
-  if (!response) return null;
-  
-  // Simple extraction logic - in a real implementation, 
-  // this would be more sophisticated to understand AI's edit intentions
-  const edits = [];
-  
-  // Look for patterns like "Replace X with Y" or "Add X"
-  if (response.includes('Replace') || response.includes('replace')) {
-    edits.push({ type: 'replace', detected: true });
-  }
-  
-  if (response.includes('Add') || response.includes('add')) {
-    edits.push({ type: 'add', detected: true });
-  }
-
-  if (response.includes('Remove') || response.includes('remove') || 
-      response.includes('Delete') || response.includes('delete')) {
-    edits.push({ type: 'delete', detected: true });
-  }
-  
-  return edits.length > 0 ? edits : null;
 }

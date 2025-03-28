@@ -1,0 +1,66 @@
+name: Test Files Check
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '__tests__/**'
+
+jobs:
+  check-test-files:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Check test files existence
+      id: check_files
+      run: |
+        echo "## Test Files Status" > test-files-report.md
+        echo "" >> test-files-report.md
+        echo "| Component | Test File | Status |" >> test-files-report.md
+        echo "|-----------|-----------|--------|" >> test-files-report.md
+        
+        # Check TipTap Editor test
+        if [ -f "__tests__/components/tiptap-editor.test.tsx" ]; then
+          echo "| TipTap Editor | __tests__/components/tiptap-editor.test.tsx | ✅ Found |" >> test-files-report.md
+        else
+          echo "| TipTap Editor | __tests__/components/tiptap-editor.test.tsx | ❌ Missing |" >> test-files-report.md
+        fi
+        
+        # Check AI Chat Interface test
+        if [ -f "__tests__/components/cursor-chat-interface.test.tsx" ]; then
+          echo "| AI Chat Interface | __tests__/components/cursor-chat-interface.test.tsx | ✅ Found |" >> test-files-report.md
+        else
+          echo "| AI Chat Interface | __tests__/components/cursor-chat-interface.test.tsx | ❌ Missing |" >> test-files-report.md
+        fi
+        
+        # Check Split-View Layout test
+        if [ -f "__tests__/components/split-view-layout.test.tsx" ]; then
+          echo "| Split-View Layout | __tests__/components/split-view-layout.test.tsx | ✅ Found |" >> test-files-report.md
+        else
+          echo "| Split-View Layout | __tests__/components/split-view-layout.test.tsx | ❌ Missing |" >> test-files-report.md
+        fi
+        
+        # Check Model Selector test
+        if [ -f "__tests__/components/model-selector.test.tsx" ]; then
+          echo "| Model Selector | __tests__/components/model-selector.test.tsx | ✅ Found |" >> test-files-report.md
+        else
+          echo "| Model Selector | __tests__/components/model-selector.test.tsx | ❌ Missing |" >> test-files-report.md
+        fi
+        
+        # Check AI API Route test
+        if [ -f "__tests__/api/ai.test.ts" ]; then
+          echo "| AI API Route | __tests__/api/ai.test.ts | ✅ Found |" >> test-files-report.md
+        else
+          echo "| AI API Route | __tests__/api/ai.test.ts | ❌ Missing |" >> test-files-report.md
+        fi
+        
+        cat test-files-report.md
+        
+    - name: Add test files report
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: 'test-files-report.md'
+        message: 'Add test files verification report'
+        push: true

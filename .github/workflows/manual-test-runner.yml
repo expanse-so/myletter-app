@@ -1,0 +1,135 @@
+name: Run Tests On-Demand
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/testing-implementation
+    paths:
+      - 'test-triggers/run-now.md'
+      - '.github/workflows/manual-test-runner.yml'
+      - 'components/**'
+      - 'utils/**'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - 'jest.config.js'
+      - 'jest.setup.js'
+      - 'tsconfig.json'
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: feature/testing-implementation
+          
+      - name: Display current branch and files
+        run: |
+          echo "Current branch: $(git branch --show-current)"
+          echo "Files in components directory:"
+          ls -la components/
+          echo "Files in utils directory:"
+          ls -la utils/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Create test output directory
+        run: mkdir -p test-results
+
+      - name: Run direct tests
+        id: direct_tests
+        run: |
+          echo "🧪 RUNNING DIRECT TESTS"
+          echo "===================================="
+          # Run direct tests and save output to a file
+          node run-direct-tests.js | tee test-results/direct-tests.log || echo "Direct tests script not found or failed"
+          
+          # Count passing and failing tests
+          DIRECT_PASSED=$(grep -o "✅ PASS:" test-results/direct-tests.log | wc -l || echo "0")
+          DIRECT_FAILED=$(grep -o "❌ FAIL:" test-results/direct-tests.log | wc -l || echo "0")
+          DIRECT_TOTAL=$((DIRECT_PASSED + DIRECT_FAILED))
+          
+          # Save counts as outputs
+          echo "direct_passed=$DIRECT_PASSED" >> $GITHUB_OUTPUT
+          echo "direct_failed=$DIRECT_FAILED" >> $GITHUB_OUTPUT
+          echo "direct_total=$DIRECT_TOTAL" >> $GITHUB_OUTPUT
+          echo "===================================="
+
+      - name: Show component file contents for debugging
+        run: |
+          echo "ModelSelector.tsx content:"
+          cat components/model-selector.tsx
+          echo "TipTapEditor.tsx content:"
+          cat components/tiptap-editor.tsx
+          echo "CursorChatInterface.tsx content:"
+          cat components/cursor-chat-interface.tsx
+
+      - name: Run Jest tests
+        id: jest_tests
+        run: |
+          echo "🧪 RUNNING JEST COMPONENT TESTS"
+          echo "===================================="
+          # Run Jest tests and save output (continue even if tests fail)
+          npx jest --json --outputFile=test-results/jest-output.json || true
+          
+          # Parse Jest output to count passed/failed tests
+          if [ -f "test-results/jest-output.json" ]; then
+            echo "Jest output file exists, parsing results"
+            JEST_TOTAL=$(cat test-results/jest-output.json | grep -o '"numTotalTests":[0-9]*' | grep -o '[0-9]*' || echo "0")
+            JEST_FAILED=$(cat test-results/jest-output.json | grep -o '"numFailedTests":[0-9]*' | grep -o '[0-9]*' || echo "0")
+            JEST_PASSED=$((JEST_TOTAL - JEST_FAILED))
+          else
+            echo "Jest output file not found, counting from logs"
+            # Fall back to counting PASS and FAIL lines in stdout for older Jest versions
+            npx jest 2>&1 | tee test-results/jest-logs.txt
+            JEST_PASSED=$(grep -o "PASS" test-results/jest-logs.txt | wc -l || echo "0")
+            JEST_FAILED=$(grep -o "FAIL" test-results/jest-logs.txt | wc -l || echo "0")
+            JEST_TOTAL=$((JEST_PASSED + JEST_FAILED))
+          fi
+          
+          # Save counts as outputs
+          echo "jest_passed=$JEST_PASSED" >> $GITHUB_OUTPUT
+          echo "jest_failed=$JEST_FAILED" >> $GITHUB_OUTPUT
+          echo "jest_total=$JEST_TOTAL" >> $GITHUB_OUTPUT
+          echo "===================================="
+
+      - name: Show detailed Jest errors
+        if: always()
+        run: |
+          echo "🔍 DETAILED JEST ERRORS"
+          echo "===================================="
+          npx jest --verbose || true
+          echo "===================================="
+
+      - name: Show test summary
+        run: |
+          echo "📊 TESTING COMPLETED"
+          echo "===================================="
+          echo "Direct Tests: ${{ steps.direct_tests.outputs.direct_passed }} passed, ${{ steps.direct_tests.outputs.direct_failed }} failed, ${{ steps.direct_tests.outputs.direct_total }} total"
+          echo "Jest Tests: ${{ steps.jest_tests.outputs.jest_passed }} passed, ${{ steps.jest_tests.outputs.jest_failed }} failed, ${{ steps.jest_tests.outputs.jest_total }} total"
+          
+          # Calculate totals
+          TOTAL_PASSED=$((${{ steps.direct_tests.outputs.direct_passed }} + ${{ steps.jest_tests.outputs.jest_passed }}))
+          TOTAL_FAILED=$((${{ steps.direct_tests.outputs.direct_failed }} + ${{ steps.jest_tests.outputs.jest_failed }}))
+          TOTAL_TESTS=$((${{ steps.direct_tests.outputs.direct_total }} + ${{ steps.jest_tests.outputs.jest_total }}))
+          
+          echo "Total: $TOTAL_PASSED passed, $TOTAL_FAILED failed, $TOTAL_TESTS total"
+          echo "===================================="
+          
+          # Set a final status based on test results
+          if [ $TOTAL_FAILED -eq 0 ]; then
+            echo "✅ ALL TESTS PASSING!"
+          else
+            echo "❌ SOME TESTS FAILING!"
+            # Uncomment this line if you want the workflow to fail when tests fail
+            # exit 1
+          fi

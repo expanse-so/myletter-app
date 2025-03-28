@@ -1,0 +1,98 @@
+name: Direct API Test Results
+
+on:
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    paths:
+      - 'test-triggers/direct-api-test.md'
+
+jobs:
+  test-with-output:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: List test files
+        run: |
+          echo "Test files:"
+          find __tests__ -type f -name "*.test.js" || echo "No test files found"
+          
+      - name: Run all tests and output results directly
+        id: test_run
+        run: |
+          # Create output directory
+          mkdir -p test-output
+          
+          echo "::group::Running tests"
+          # Run tests with JSON output
+          npm test -- --json | tee test-output/results.json || true
+          echo "::endgroup::"
+          
+          # Directly output results to job output
+          echo "::group::Test Results JSON"
+          cat test-output/results.json
+          echo "::endgroup::"
+          
+          # Create readable summary
+          echo "::group::Test Summary"
+          node -e '
+            const fs = require("fs");
+            try {
+              const results = JSON.parse(fs.readFileSync("test-output/results.json", "utf8"));
+              
+              console.log(`TOTAL TESTS: ${results.numTotalTests || 0}`);
+              console.log(`PASSED TESTS: ${results.numPassedTests || 0}`);
+              console.log(`FAILED TESTS: ${results.numFailedTests || 0}`);
+              console.log("\nTEST SUITES:");
+              
+              (results.testResults || []).forEach(suite => {
+                console.log(`\n${suite.name}`);
+                console.log(`Status: ${suite.status}`);
+                console.log(`Tests: ${suite.numPassingTests} passed, ${suite.numFailingTests} failed`);
+                
+                if (suite.assertionResults) {
+                  console.log("\nTest Cases:");
+                  suite.assertionResults.forEach(test => {
+                    console.log(`- ${test.title}: ${test.status}`);
+                    if (test.status === "failed" && test.failureMessages) {
+                      console.log(`  Error: ${test.failureMessages[0].split("\n")[0]}`);
+                    }
+                  });
+                }
+              });
+            } catch (error) {
+              console.log("Error processing results:", error);
+            }
+          '
+          echo "::endgroup::"
+          
+          # Output test results as step output that can be accessed via API
+          node -e '
+            const fs = require("fs");
+            try {
+              const results = JSON.parse(fs.readFileSync("test-output/results.json", "utf8"));
+              const summary = {
+                total: results.numTotalTests || 0,
+                passed: results.numPassedTests || 0,
+                failed: results.numFailedTests || 0,
+                testResults: (results.testResults || []).map(suite => ({
+                  name: suite.name,
+                  status: suite.status,
+                  passed: suite.numPassingTests,
+                  failed: suite.numFailingTests
+                }))
+              };
+              console.log(`::set-output name=summary::${JSON.stringify(summary)}`);
+            } catch (error) {
+              console.log(`::set-output name=error::${error.message}`);
+            }
+          '
