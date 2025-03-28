@@ -158,9 +158,11 @@ jobs:
           return <div data-testid=\"model-selector\">Model Selector</div>;
         }" > components/model-selector.tsx
     
+    - name: Create test-results directory
+      run: mkdir -p test-results
+    
     - name: Run tests
       run: |
-        mkdir -p test-results
         echo "# ACTUAL TEST EXECUTION RESULTS" > test-results/real-test-output.md
         echo '```' >> test-results/real-test-output.md
         npx jest --testMatch="**/__tests__/**/*.test.[jt]s?(x)" --verbose > test-results/jest-output.txt 2>&1 || true
@@ -179,9 +181,9 @@ jobs:
       run: |
         echo "## Test Summary" >> test-results/real-test-output.md
         echo "" >> test-results/real-test-output.md
-        JEST_PASSED=$(grep -o "PASS" test-results/jest-output.txt | wc -l)
-        JEST_FAILED=$(grep -o "FAIL" test-results/jest-output.txt | wc -l)
-        DIRECT_PASSED=$(grep -o "PASS:" test-results/direct-test-output.txt | wc -l)
+        JEST_PASSED=$(grep -o "PASS" test-results/jest-output.txt | wc -l || echo "0")
+        JEST_FAILED=$(grep -o "FAIL" test-results/jest-output.txt | wc -l || echo "0")
+        DIRECT_PASSED=$(grep -o "PASS:" test-results/direct-test-output.txt | wc -l || echo "0")
         
         TOTAL_TESTS=$((JEST_PASSED + JEST_FAILED + DIRECT_PASSED))
         TOTAL_PASSED=$((JEST_PASSED + DIRECT_PASSED))
@@ -190,6 +192,12 @@ jobs:
         echo "* Total Tests: $TOTAL_TESTS" >> test-results/real-test-output.md
         echo "* Passed: $TOTAL_PASSED" >> test-results/real-test-output.md
         echo "* Failed: $TOTAL_FAILED" >> test-results/real-test-output.md
+        
+        # Create a placeholder if the file is empty
+        if [ ! -s test-results/real-test-output.md ]; then
+          echo "# No test results were generated" > test-results/real-test-output.md
+          echo "This could be because tests failed to run properly." >> test-results/real-test-output.md
+        fi
       
     - name: Commit and push test results
       uses: EndBug/add-and-commit@v9
@@ -197,3 +205,10 @@ jobs:
         add: 'test-results'
         message: 'Add REAL test execution results'
         push: true
+        
+    - name: Upload test results as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: test-results/
+        if-no-files-found: warn
