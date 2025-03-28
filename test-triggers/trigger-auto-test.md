@@ -25,9 +25,9 @@ curl -X POST \
 Simply modify this file (even just adding a timestamp below) and commit to trigger a new test run.
 
 ## Latest Test Run Trigger
-Timestamp: 2025-03-28T21:21:00Z  
+Timestamp: 2025-03-28T21:24:00Z  
 
-This workflow will now run with the following real tests:
+This workflow will now run with the following test files:
 1. ModelSelector.test.js
 2. TipTapEditor.test.js
 3. CursorChatInterface.test.js
@@ -40,4 +40,4 @@ All tests have been properly configured with:
 - Updated package.json with test dependencies
 - API implementation in utils/api.ts
 
-This will provide real test results that the AI can read directly without human intervention, aligning with the Expanse philosophy of removing humans from implementation loops.
+The workflow has been fixed to include the missing upload-artifact action, which should resolve the previous error.
