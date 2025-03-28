@@ -1,0 +1,62 @@
+name: Simple Test Runner
+
+on:
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    paths:
+      - 'test-triggers/run-simple-test.md'
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Display environment
+        run: |
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          ls -la
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: List test files
+        run: |
+          echo "Test files:"
+          find __tests__ -type f -name "*.test.js" || echo "No test files found"
+          
+      - name: Display package.json
+        run: cat package.json
+          
+      - name: Display jest.config.js
+        run: cat jest.config.js || echo "No jest.config.js found"
+          
+      - name: Run simple test
+        run: npm test || echo "Tests failed but continuing"
+        
+      - name: Create simple results
+        run: |
+          mkdir -p test-results
+          echo "Test execution completed at $(date)" > test-results/simple-result.txt
+          echo "This file was created to verify the workflow can write and commit files" >> test-results/simple-result.txt
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple-test-results
+          path: test-results/
+          
+      - name: Commit test result
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add test-results/
+          git commit -m "Add simple test results [skip ci]" || echo "No changes to commit"
+          git push || echo "Failed to push changes"
