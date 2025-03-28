@@ -1,44 +1,27 @@
 name: Direct Test Result
 
 on:
+  push:
+    branches:
+      - fix/github-actions-artifact
   workflow_dispatch:
-  issue_comment:
-    types: [created]
 
 jobs:
-  test:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.issue.pull_request && github.event.comment.body == '/direct-test') }}
+  just-run:
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v3
-      with:
-        ref: feature/testing-implementation
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Run tests with output capture
+    - name: Create test result directory
       run: |
         mkdir -p test-results
-        npm test > test-results/output.txt 2>&1 || true
+        echo "# Test Result" > test-results/test-output.md
+        echo "This is a simple test to verify GitHub Actions is working." >> test-results/test-output.md
         
-    - name: Create detailed results
-      run: |
-        echo "# Test Results" > test-results/report.md
-        echo "\`\`\`" >> test-results/report.md
-        cat test-results/output.txt >> test-results/report.md
-        echo "\`\`\`" >> test-results/report.md
-      
-    - name: Commit and push test results
-      uses: EndBug/add-and-commit@v9
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
       with:
-        add: 'test-results'
-        message: 'Add concrete test results'
-        push: true
+        name: simple-test-results
+        path: test-results/
+        if-no-files-found: warn
