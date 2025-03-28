@@ -1,146 +1,151 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import { CursorChatInterface } from '../../components/cursor-chat-interface';
 
-// Mock the AI API response
-jest.mock('../../app/api/ai/route', () => ({
-  POST: jest.fn().mockResolvedValue({
-    json: jest.fn().mockResolvedValue({
-      text: 'AI response content',
-      done: true
-    })
-  })
+// Mock the API call
+jest.mock('../../utils/api', () => ({
+  sendMessageToAI: jest.fn().mockResolvedValue({ text: 'AI response', error: null }),
 }));
+
+const mockSendMessageToAI = require('../../utils/api').sendMessageToAI;
 
 describe('CursorChatInterface Component', () => {
   beforeEach(() => {
-    // Reset mock implementations before each test
-    jest.clearAllMocks();
+    // Clear mock calls between tests
+    mockSendMessageToAI.mockClear();
   });
 
-  it('renders the chat interface with input field and send button', () => {
-    render(<CursorChatInterface onApplyContent={jest.fn()} />);
+  // Test basic rendering
+  test('renders chat interface with empty message history', () => {
+    render(<CursorChatInterface onSendMessage={jest.fn()} onSelectContent={jest.fn()} />);
     
-    expect(screen.getByPlaceholderText(/Type a message/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+    // Check if message input is displayed
+    expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
+    
+    // Check if send button is displayed
+    expect(screen.getByText('Send')).toBeInTheDocument();
+    
+    // Initially, there should be no messages
+    expect(screen.queryByText('AI:')).not.toBeInTheDocument();
+    expect(screen.queryByText('You:')).not.toBeInTheDocument();
   });
 
-  it('allows users to type a message', () => {
-    render(<CursorChatInterface onApplyContent={jest.fn()} />);
+  // Test with initial message history
+  test('renders with initial message history', () => {
+    const initialMessages = [
+      { sender: 'user', text: 'Hello AI' },
+      { sender: 'ai', text: 'Hello human' },
+    ];
     
-    const input = screen.getByPlaceholderText(/Type a message/i);
-    fireEvent.change(input, { target: { value: 'Hello AI' } });
-    
-    expect(input).toHaveValue('Hello AI');
-  });
-
-  it('sends user message when clicking send button', async () => {
-    render(<CursorChatInterface onApplyContent={jest.fn()} />);
-    
-    const input = screen.getByPlaceholderText(/Type a message/i);
-    fireEvent.change(input, { target: { value: 'Hello AI' } });
-    
-    const sendButton = screen.getByRole('button', { name: /send/i });
-    fireEvent.click(sendButton);
-    
-    // Check if user message was added to the chat
-    await waitFor(() => {
-      expect(screen.getByText('Hello AI')).toBeInTheDocument();
-    });
-    
-    // Input should be cleared after sending
-    expect(input).toHaveValue('');
-  });
-
-  it('displays AI response after sending message', async () => {
-    render(<CursorChatInterface onApplyContent={jest.fn()} />);
-    
-    // Send a message
-    const input = screen.getByPlaceholderText(/Type a message/i);
-    fireEvent.change(input, { target: { value: 'Hello AI' } });
-    
-    const sendButton = screen.getByRole('button', { name: /send/i });
-    fireEvent.click(sendButton);
-    
-    // Check if AI response appears
-    await waitFor(() => {
-      expect(screen.getByText('AI response content')).toBeInTheDocument();
-    });
-  });
-
-  it('shows loading state while waiting for AI response', async () => {
-    // Mock a delayed response
-    const mockedPost = require('../../app/api/ai/route').POST;
-    mockedPost.mockImplementationOnce(() => 
-      new Promise(resolve => 
-        setTimeout(() => 
-          resolve({
-            json: () => Promise.resolve({ text: 'Delayed response', done: true })
-          }), 
-          100
-        )
-      )
+    render(
+      <CursorChatInterface
+        initialMessages={initialMessages}
+        onSendMessage={jest.fn()}
+        onSelectContent={jest.fn()}
+      />
     );
     
-    render(<CursorChatInterface onApplyContent={jest.fn()} />);
+    // Check if messages are displayed
+    expect(screen.getByText('You: Hello AI')).toBeInTheDocument();
+    expect(screen.getByText('AI: Hello human')).toBeInTheDocument();
+  });
+
+  // Test user input and message sending
+  test('captures user input and sends message', async () => {
+    const mockSendMessage = jest.fn();
     
-    // Send a message
-    const input = screen.getByPlaceholderText(/Type a message/i);
-    fireEvent.change(input, { target: { value: 'Hello AI' } });
+    render(
+      <CursorChatInterface
+        onSendMessage={mockSendMessage}
+        onSelectContent={jest.fn()}
+      />
+    );
     
-    const sendButton = screen.getByRole('button', { name: /send/i });
+    // Type a message
+    const input = screen.getByPlaceholderText('Type a message...');
+    fireEvent.change(input, { target: { value: 'Test message' } });
+    
+    // Send the message
+    const sendButton = screen.getByText('Send');
     fireEvent.click(sendButton);
     
-    // Check for loading indicator
-    expect(screen.getByText(/Thinking.../i)).toBeInTheDocument();
+    // Check if onSendMessage was called with the message
+    expect(mockSendMessage).toHaveBeenCalledWith('Test message');
+    
+    // Input should be cleared after sending
+    expect(input.value).toBe('');
+  });
+
+  // Test message sending on Enter key
+  test('sends message on Enter key press', () => {
+    const mockSendMessage = jest.fn();
+    
+    render(
+      <CursorChatInterface
+        onSendMessage={mockSendMessage}
+        onSelectContent={jest.fn()}
+      />
+    );
+    
+    // Type a message
+    const input = screen.getByPlaceholderText('Type a message...');
+    fireEvent.change(input, { target: { value: 'Test message' } });
+    
+    // Press Enter
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+    
+    // Check if onSendMessage was called with the message
+    expect(mockSendMessage).toHaveBeenCalledWith('Test message');
+  });
+
+  // Test handling loading state
+  test('displays loading state while waiting for AI response', async () => {
+    // Mock API with a delayed response
+    mockSendMessageToAI.mockImplementation(() => {
+      return new Promise(resolve => {
+        setTimeout(() => resolve({ text: 'Delayed response', error: null }), 100);
+      });
+    });
+    
+    render(
+      <CursorChatInterface
+        onSendMessage={jest.fn()}
+        onSelectContent={jest.fn()}
+      />
+    );
+    
+    // Type and send a message
+    const input = screen.getByPlaceholderText('Type a message...');
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByText('Send'));
+    
+    // Loading indicator should be displayed
+    expect(await screen.findByText('AI is thinking...')).toBeInTheDocument();
     
     // Wait for response
     await waitFor(() => {
-      expect(screen.getByText('Delayed response')).toBeInTheDocument();
-    });
+      expect(screen.queryByText('AI is thinking...')).not.toBeInTheDocument();
+    }, { timeout: 200 });
   });
 
-  it('allows clicking on AI message to apply content', async () => {
-    const handleApplyContent = jest.fn();
-    render(<CursorChatInterface onApplyContent={handleApplyContent} />);
+  // Test error handling
+  test('displays error message when AI response fails', async () => {
+    // Mock API with an error
+    mockSendMessageToAI.mockResolvedValue({ text: null, error: 'API error' });
     
-    // Send a message and get response
-    const input = screen.getByPlaceholderText(/Type a message/i);
-    fireEvent.change(input, { target: { value: 'Hello AI' } });
+    render(
+      <CursorChatInterface
+        onSendMessage={jest.fn()}
+        onSelectContent={jest.fn()}
+      />
+    );
     
-    const sendButton = screen.getByRole('button', { name: /send/i });
-    fireEvent.click(sendButton);
+    // Type and send a message
+    const input = screen.getByPlaceholderText('Type a message...');
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    fireEvent.click(screen.getByText('Send'));
     
-    // Wait for AI response
-    await waitFor(() => {
-      expect(screen.getByText('AI response content')).toBeInTheDocument();
-    });
-    
-    // Click on AI message
-    fireEvent.click(screen.getByText('AI response content'));
-    
-    // Check if onApplyContent was called with the AI message content
-    expect(handleApplyContent).toHaveBeenCalledWith('AI response content');
-  });
-  
-  it('handles errors gracefully', async () => {
-    // Mock an error response
-    const mockedPost = require('../../app/api/ai/route').POST;
-    mockedPost.mockRejectedValueOnce(new Error('API Error'));
-    
-    render(<CursorChatInterface onApplyContent={jest.fn()} />);
-    
-    // Send a message
-    const input = screen.getByPlaceholderText(/Type a message/i);
-    fireEvent.change(input, { target: { value: 'Hello AI' } });
-    
-    const sendButton = screen.getByRole('button', { name: /send/i });
-    fireEvent.click(sendButton);
-    
-    // Check for error message
-    await waitFor(() => {
-      expect(screen.getByText(/Error: API Error/i)).toBeInTheDocument();
-    });
+    // Error message should be displayed
+    expect(await screen.findByText('Error: API error')).toBeInTheDocument();
   });
 });
