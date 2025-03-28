@@ -3,26 +3,12 @@ import { TipTapEditor } from './tiptap-editor';
 import { CursorChatInterface } from './cursor-chat-interface';
 
 export function SplitViewLayout() {
-  // Default split: 50/50
-  const [splitRatio, setSplitRatio] = useState(0.5);
+  // State for the ratio between left and right panels
+  const [leftPanelFlex, setLeftPanelFlex] = useState(2);
+  const [rightPanelFlex, setRightPanelFlex] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [editorContent, setEditorContent] = useState('<p>Welcome to MyLetter!</p>');
-
-  // Handle window resize
-  useEffect(() => {
-    const handleResize = () => {
-      // If mobile view, reset to stacked layout
-      if (window.innerWidth < 768) {
-        setSplitRatio(1); // Full width for each panel in mobile
-      } else if (splitRatio === 1) {
-        setSplitRatio(0.5); // Reset to 50/50 if coming from mobile view
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [splitRatio]);
 
   // Handle divider dragging
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -38,11 +24,15 @@ export function SplitViewLayout() {
       const containerWidth = containerRect.width;
       const mouseX = e.clientX - containerRect.left;
       
-      // Calculate new ratio but constrain between 0.2 and 0.8
-      let newRatio = mouseX / containerWidth;
-      newRatio = Math.max(0.2, Math.min(0.8, newRatio));
+      // Calculate new flex values
+      const leftFlex = mouseX / (containerWidth - mouseX);
       
-      setSplitRatio(newRatio);
+      // Ensure minimum panel sizes (around 20%)
+      const minFlex = 0.25;
+      if (leftFlex > minFlex && 1/leftFlex > minFlex) {
+        setLeftPanelFlex(leftFlex * rightPanelFlex);
+        setRightPanelFlex(rightPanelFlex);
+      }
     };
 
     const handleMouseUp = () => {
@@ -58,20 +48,31 @@ export function SplitViewLayout() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, rightPanelFlex]);
+
+  // Handle sending message from chat interface
+  const handleSendMessage = (message: string) => {
+    // Process the message - in a real app this would likely interact with an API
+    console.log('Message sent:', message);
+  };
 
   // Handle applying content from AI to editor
-  const handleApplyContent = (content: string) => {
+  const handleSelectContent = (content: string) => {
     setEditorContent(content);
+  };
+
+  // Handle editor content changes
+  const handleEditorChange = (html: string) => {
+    setEditorContent(html);
   };
 
   return (
     <div 
       className="split-view-container" 
       ref={containerRef}
+      data-testid="split-view-container"
       style={{ 
-        display: 'flex', 
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+        display: 'flex',
         height: '100vh'
       }}
     >
@@ -79,25 +80,24 @@ export function SplitViewLayout() {
         data-testid="left-panel"
         className="left-panel" 
         style={{ 
-          width: window.innerWidth < 768 ? '100%' : `${splitRatio * 100}%`,
+          flex: leftPanelFlex.toString(),
           overflow: 'auto'
         }}
       >
         <TipTapEditor 
           initialContent={editorContent} 
-          onChange={(html) => setEditorContent(html)}
+          onChange={handleEditorChange}
         />
       </div>
       
       <div 
-        data-testid="split-divider"
-        className="divider" 
+        data-testid="panel-resizer"
+        className="resizer" 
         onMouseDown={handleMouseDown}
         style={{ 
           cursor: 'col-resize',
           width: '4px',
-          background: '#e5e7eb',
-          display: window.innerWidth < 768 ? 'none' : 'block'
+          background: '#e5e7eb'
         }}
       />
       
@@ -105,11 +105,14 @@ export function SplitViewLayout() {
         data-testid="right-panel"
         className="right-panel" 
         style={{ 
-          width: window.innerWidth < 768 ? '100%' : `${(1 - splitRatio) * 100}%`,
+          flex: rightPanelFlex.toString(),
           overflow: 'auto'
         }}
       >
-        <CursorChatInterface onApplyContent={handleApplyContent} />
+        <CursorChatInterface 
+          onSendMessage={handleSendMessage}
+          onSelectContent={handleSelectContent}
+        />
       </div>
     </div>
   );
