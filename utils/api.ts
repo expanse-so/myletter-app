@@ -1,9 +1,15 @@
-interface AIResponse {
-  text: string | null;
-  error: string | null;
-}
+/**
+ * API utilities for interacting with backend services
+ */
 
-export async function sendMessageToAI(message: string): Promise<AIResponse> {
+/**
+ * Send a message to the AI and get a response
+ * 
+ * @param message - The user message to send to the AI
+ * @param model - The AI model to use (defaults to gpt-4o-mini)
+ * @returns Promise with the AI response
+ */
+export async function sendMessageToAI(message: string, model: string = 'gpt-4o-mini') {
   try {
     const response = await fetch('/api/ai', {
       method: 'POST',
@@ -12,18 +18,16 @@ export async function sendMessageToAI(message: string): Promise<AIResponse> {
       },
       body: JSON.stringify({
         message,
-        model: 'gpt-4o-mini', // Default model
-      }),
+        model
+      })
     });
-
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      return { text: null, error: errorData.error || 'Failed to get AI response' };
+      throw new Error(`Failed to send message: ${response.status} ${response.statusText}`);
     }
-
-    const data = await response.json();
-    return { text: data.text, error: null };
-  } catch (err) {
-    return { text: null, error: err.message || 'An error occurred' };
+    
+    return await response.json();
+  } catch (error) {
+    throw error;
   }
 }
