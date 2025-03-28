@@ -1,61 +1,53 @@
 'use client';
 
-import { useState } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { supabase } from '@/lib/supabase';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-// Form validation schema
-const subscriberSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  name: z.string().optional(),
-});
-
-type SubscriberFormValues = z.infer<typeof subscriberSchema>;
+import { Mail, User, LoaderCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 interface SubscriberFormProps {
   newsletterId: string;
   onSuccess?: (data: any) => void;
+  title?: string;
+  description?: string;
 }
 
-export function SubscriberForm({ newsletterId, onSuccess }: SubscriberFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formStatus, setFormStatus] = useState<{
-    type: 'success' | 'error' | null;
-    message: string | null;
-  }>({
-    type: null,
-    message: null,
-  });
+export function SubscriberForm({
+  newsletterId,
+  onSuccess,
+  title = 'Subscribe to our newsletter',
+  description = 'Get the latest updates and news delivered to your inbox.',
+}: SubscriberFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({ email: '', name: '' });
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<SubscriberFormValues>({
-    resolver: zodResolver(subscriberSchema),
-    defaultValues: {
-      email: '',
-      name: '',
-    },
-  });
-
-  const onSubmit = async (values: SubscriberFormValues) => {
-    setIsSubmitting(true);
-    setFormStatus({ type: null, message: null });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage(null);
 
     try {
+      // Basic validation
+      if (!formData.email) {
+        throw new Error('Email is required');
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email');
+      }
+
       const { data, error } = await supabase
         .from('subscribers')
         .insert({
           newsletter_id: newsletterId,
-          email: values.email,
-          name: values.name || null,
+          email: formData.email,
+          name: formData.name || null,
           status: 'active',
         })
         .select()
@@ -63,86 +55,102 @@ export function SubscriberForm({ newsletterId, onSuccess }: SubscriberFormProps)
 
       if (error) {
         if (error.code === '23505') {
-          setFormStatus({
-            type: 'error',
-            message: 'This email is already subscribed.',
-          });
+          throw new Error('This email is already subscribed.');
         } else {
-          setFormStatus({
-            type: 'error',
-            message: `Error subscribing: ${error.message}`,
-          });
-        }
-      } else {
-        setFormStatus({
-          type: 'success',
-          message: 'Successfully subscribed!',
-        });
-        reset();
-        if (onSuccess) {
-          onSuccess(data);
+          throw new Error(`Error subscribing: ${error.message}`);
         }
       }
+
+      setMessage({ text: 'Successfully subscribed to the newsletter!', type: 'success' });
+      setFormData({ email: '', name: '' });
+      
+      if (onSuccess) {
+        onSuccess(data);
+      }
     } catch (error) {
-      setFormStatus({
+      setMessage({
+        text: error instanceof Error ? error.message : 'Failed to subscribe',
         type: 'error',
-        message: 'An unexpected error occurred.',
       });
-      console.error('Subscription error:', error);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-4 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-      <div className="text-xl font-semibold">Subscribe to our newsletter</div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="w-full max-w-md mx-auto border rounded-lg bg-background p-6 shadow-sm">
+      <div className="mb-6 space-y-2">
+        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <div className="relative">
+            <Input
+              id="name"
+              className="pl-9"
+              placeholder="John Doe"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              disabled={isLoading}
+            />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+              <User size={16} strokeWidth={2} aria-hidden="true" />
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="your@email.com"
-            {...register('email')}
-          />
-          {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="name">Name (optional)</Label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Your Name"
-            {...register('name')}
-          />
-          {errors.name && (
-            <p className="text-sm text-red-500">{errors.name.message}</p>
-          )}
-        </div>
-
-        {formStatus.message && (
-          <div
-            className={`p-3 rounded ${
-              formStatus.type === 'success'
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}
-          >
-            {formStatus.message}
+          <div className="relative">
+            <Input
+              id="email"
+              type="email"
+              className="pl-9"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              disabled={isLoading}
+              required
+            />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+              <Mail size={16} strokeWidth={2} aria-hidden="true" />
+            </div>
           </div>
+        </div>
+
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          <span className={cn("inline-flex items-center", isLoading && "text-transparent")}>
+            Subscribe
+          </span>
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <LoaderCircle className="animate-spin" size={16} strokeWidth={2} aria-hidden="true" />
+            </div>
+          )}
+        </Button>
+
+        {message && (
+          <p
+            className={cn(
+              "text-sm",
+              message.type === "error" ? "text-destructive" : "text-green-600 dark:text-green-500"
+            )}
+            role="alert"
+          >
+            {message.text}
+          </p>
         )}
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Subscribing...' : 'Subscribe'}
-        </Button>
+        <p className="text-center text-xs text-muted-foreground pt-2">
+          By subscribing you agree to our{" "}
+          <a className="underline hover:no-underline" href="#">
+            Privacy Policy
+          </a>
+          .
+        </p>
       </form>
     </div>
   );
