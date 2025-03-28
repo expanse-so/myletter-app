@@ -10,8 +10,8 @@ interface Model {
 
 interface ModelSelectorProps {
   models: Model[];
-  selectedModel: string;
-  onModelChange: (modelId: string) => void;
+  selectedModel: Model;
+  onModelChange: (model: Model) => void;
   disabled?: boolean;
   showCostTier?: boolean;
   groupByProvider?: boolean;
@@ -31,11 +31,12 @@ export function ModelSelector({
     return <div>No models available</div>;
   }
   
-  const selectedModelData = models.find((model) => model.id === selectedModel);
-  
   const handleSelect = (modelId: string) => {
-    onModelChange(modelId);
-    setIsOpen(false);
+    const model = models.find((m) => m.id === modelId);
+    if (model) {
+      onModelChange(model);
+      setIsOpen(false);
+    }
   };
   
   // Group models by provider if requested
@@ -63,8 +64,9 @@ export function ModelSelector({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className="model-selector-button"
         disabled={disabled}
+        role="button"
       >
-        {selectedModelData ? selectedModelData.name : 'Select a model'}
+        {selectedModel ? selectedModel.name : 'Select a model'}
       </button>
       
       {isOpen && (
@@ -74,14 +76,14 @@ export function ModelSelector({
             Object.entries(groupedModels || {}).map(([provider, providerModels]) => (
               <div key={provider} className="provider-group">
                 <div className="provider-name">{formatProvider(provider)}</div>
-                {providerModels.map((model) => (
+                {providerModels.map((model: Model) => (
                   <div
                     key={model.id}
-                    className={`model-option ${model.id === selectedModel ? 'selected' : ''}`}
+                    className={`model-option ${model.id === selectedModel.id ? 'selected' : ''}`}
                     onClick={() => handleSelect(model.id)}
                   >
                     <span>{model.name}</span>
-                    {showCostTier && <span className="cost-tier">{model.cost_tier}</span>}
+                    {showCostTier && <span className="cost-tier">({model.cost_tier})</span>}
                   </div>
                 ))}
               </div>
@@ -91,11 +93,11 @@ export function ModelSelector({
             models.map((model) => (
               <div
                 key={model.id}
-                className={`model-option ${model.id === selectedModel ? 'selected' : ''}`}
+                className={`model-option ${model.id === selectedModel.id ? 'selected' : ''}`}
                 onClick={() => handleSelect(model.id)}
               >
                 <span>{model.name}</span>
-                {showCostTier && <span className="cost-tier">{model.cost_tier}</span>}
+                {showCostTier && <span className="cost-tier">({model.cost_tier})</span>}
               </div>
             ))
           )}
