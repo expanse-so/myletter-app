@@ -1,0 +1,166 @@
+name: Auto Test Report
+
+on:
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'utils/**'
+      - '__tests__/**'
+      - 'package.json'
+      - 'jest.config.js'
+      - 'tsconfig.json'
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Display branch and files
+        run: |
+          echo "Current branch: ${{ github.ref }}"
+          echo "Files in workspace:"
+          ls -la
+          
+      - name: Run tests with detailed reporting
+        id: run_tests
+        run: |
+          # Create test results directory
+          mkdir -p test-results
+          
+          # Run tests and capture output in both machine and human readable formats
+          npm test -- --json --outputFile=test-results/jest-output.json || true
+          npm test -- --verbose > test-results/detailed-output.txt || true
+          
+          # Extract test counts and save a summary
+          echo "Analyzing test results..."
+          
+          # Process the JSON output to create summary and results files
+          node -e '
+            const fs = require("fs");
+            try {
+              // Read jest output
+              const jestOutput = JSON.parse(fs.readFileSync("test-results/jest-output.json", "utf8"));
+              
+              // Calculate stats
+              const totalTests = jestOutput.numTotalTests;
+              const passedTests = jestOutput.numPassedTests;
+              const failedTests = jestOutput.numFailedTests;
+              
+              // Create summary object
+              const summary = {
+                timestamp: new Date().toISOString(),
+                branch: process.env.GITHUB_REF,
+                commit: process.env.GITHUB_SHA,
+                totalTests,
+                passedTests,
+                failedTests,
+                testResults: jestOutput.testResults.map(result => ({
+                  name: result.name,
+                  status: result.status,
+                  passed: result.numPassingTests,
+                  failed: result.numFailingTests,
+                  errors: result.failureMessage 
+                    ? [result.failureMessage] 
+                    : (result.assertionResults 
+                        ? result.assertionResults
+                            .filter(a => a.status === "failed")
+                            .map(a => ({ 
+                              title: a.title,
+                              fullName: a.fullName,
+                              status: a.status,
+                              failureMessages: a.failureMessages
+                            }))
+                        : [])
+                }))
+              };
+              
+              // Write summary to file
+              fs.writeFileSync(
+                "test-results/summary.json", 
+                JSON.stringify(summary, null, 2)
+              );
+              
+              // Create a markdown report
+              const mdReport = `# Test Results
+              
+## Summary
+- **Total Tests:** ${totalTests}
+- **Passed:** ${passedTests}
+- **Failed:** ${failedTests}
+- **Date:** ${new Date().toISOString()}
+- **Branch:** ${process.env.GITHUB_REF}
+- **Commit:** ${process.env.GITHUB_SHA}
+
+## Failed Tests
+${summary.testResults
+  .filter(r => r.failed > 0)
+  .map(r => `
+### ${r.name}
+- Status: ${r.status}
+- Failed: ${r.failed}
+
+${r.errors.length > 0 
+  ? r.errors.map(e => typeof e === "string" 
+    ? `\`\`\`\n${e}\n\`\`\`` 
+    : `- **${e.title}**\n\`\`\`\n${e.failureMessages.join("\n")}\n\`\`\``
+  ).join("\n") 
+  : "No detailed error information available"}
+`).join("\n") || "No failed tests"}
+
+## Passed Tests
+${summary.testResults
+  .filter(r => r.failed === 0)
+  .map(r => `- ${r.name}: ${r.passed} tests passed`)
+  .join("\n") || "No passed tests"}
+`;
+              
+              // Write markdown report
+              fs.writeFileSync("test-results/report.md", mdReport);
+              
+              // Output for GitHub Actions
+              console.log(`::set-output name=total::${totalTests}`);
+              console.log(`::set-output name=passed::${passedTests}`);
+              console.log(`::set-output name=failed::${failedTests}`);
+              
+            } catch (error) {
+              console.error("Error processing test results:", error);
+              // Create fallback summary if JSON processing failed
+              const summary = {
+                timestamp: new Date().toISOString(),
+                branch: process.env.GITHUB_REF,
+                commit: process.env.GITHUB_SHA,
+                error: "Failed to process test results: " + error.message
+              };
+              fs.writeFileSync("test-results/summary.json", JSON.stringify(summary, null, 2));
+              fs.writeFileSync("test-results/report.md", "# Test Results\n\nAn error occurred when processing test results: " + error.message);
+            }
+          '
+          
+          echo "Test processing complete."
+          
+      - name: Show test summary
+        run: |
+          echo "Test Results Summary:"
+          cat test-results/summary.json | jq .
+          
+      - name: Commit test results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add test-results/
+          git commit -m "Update test results [skip ci]" || echo "No test result changes to commit"
+          git push
