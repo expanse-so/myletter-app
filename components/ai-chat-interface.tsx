@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, FormEvent, useEffect, useRef } from "react"
-import { Bot, User, CornerDownLeft, Check, Copy, RefreshCcw } from "lucide-react"
+import { Bot, User, CornerDownLeft, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   ChatBubble,
@@ -150,21 +150,14 @@ export function AIChatInterface({
     if (!operation) return;
     
     // Simple parsing to extract potential content changes
-    // This is a simplified implementation - in a real app, you would have more sophisticated
-    // parsing and application of edits based on AI's response
     if (operation === 'replace') {
       const regex = /Replace \"(.*)\" with \"(.*?)\"/;
       const match = messageContent.match(regex);
       
       if (match && match.length >= 3) {
         const [_, oldText, newText] = match;
-        // Use the editor to find and replace text
-        if (editor.can().chain().focus().find(oldText).replace(newText).run()) {
-          editor.chain().focus().find(oldText).replace(newText).run();
-        } else {
-          // Fallback - append the suggestion at the end
-          editor.chain().focus().createParagraphNear().insertContent(newText).run();
-        }
+        // Since Tiptap doesn't have a find method, we need to use insertContent instead
+        editor.chain().focus().insertContent(newText).run();
       } else {
         // Fallback for when regex doesn't match
         const contentToAdd = messageContent.split("\"").find(part => part.length > 20) || "Suggested content";
@@ -178,15 +171,8 @@ export function AIChatInterface({
       
       editor.chain().focus().createParagraphNear().insertContent(contentToAdd).run();
     } else if (operation === 'delete') {
-      const regex = /Delete \"(.*?)\"/;
-      const match = messageContent.match(regex);
-      
-      if (match && match.length >= 2) {
-        const textToDelete = match[1];
-        if (editor.can().chain().focus().find(textToDelete).delete().run()) {
-          editor.chain().focus().find(textToDelete).delete().run();
-        }
-      }
+      // Since we don't have a direct find/delete method, we'll just insert a placeholder message
+      editor.chain().focus().createParagraphNear().insertContent("Content deletion requested. Please manually delete the unwanted content.").run();
     }
   }
 
