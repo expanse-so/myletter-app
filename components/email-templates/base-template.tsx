@@ -132,7 +132,6 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
             maxWidth: 0,
             opacity: 0,
             overflow: 'hidden',
-            msoHide: 'all',
             visibility: 'hidden',
             width: 0,
           }}
@@ -149,8 +148,6 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
             backgroundColor: '#f6f6f6',
             width: '100%',
             borderCollapse: 'separate',
-            msoTableLspace: '0pt',
-            msoTableRspace: '0pt',
           }}
         >
           <tr>
@@ -184,8 +181,6 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
                   style={{
                     backgroundColor: '#ffffff',
                     borderCollapse: 'separate',
-                    msoTableLspace: '0pt',
-                    msoTableRspace: '0pt',
                     borderRadius: '3px',
                     width: '100%',
                   }}
@@ -207,8 +202,6 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
                         cellSpacing="0"
                         style={{
                           borderCollapse: 'separate',
-                          msoTableLspace: '0pt',
-                          msoTableRspace: '0pt',
                           width: '100%',
                         }}
                       >
@@ -239,8 +232,6 @@ export const BaseEmailTemplate: React.FC<BaseEmailTemplateProps> = ({
                     cellSpacing="0"
                     style={{
                       borderCollapse: 'separate',
-                      msoTableLspace: '0pt',
-                      msoTableRspace: '0pt',
                       width: '100%',
                     }}
                   >
