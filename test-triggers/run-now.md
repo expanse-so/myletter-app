@@ -2,7 +2,7 @@
 
 Modifying this file will trigger a workflow that will run the tests.
 
-Timestamp: 2025-03-28T20:30:00Z (triggering another test run)
+Timestamp: 2025-03-28T20:31:00Z (triggering with updated test configuration)
 
 ## How to manually trigger the test workflow
 
@@ -27,11 +27,12 @@ Simply modify this file (like changing the timestamp) and commit it to trigger t
 
 ---
 
-NOTE: This file has been modified to trigger another test run to check if our fixes have resolved the issues.
+NOTE: We've made several critical test configuration updates:
 
-Previous fixes included:
-1. Fixed ModelSelector to match test expectations
-2. Updated TipTapEditor with required button titles and missing buttons
-3. Fixed CursorChatInterface to use proper message format and handlers
-4. Added utils/api.ts implementation
-5. Updated SplitViewLayout to use correct test IDs and format
+1. Added proper TypeScript configuration (tsconfig.json)
+2. Added Jest configuration (jest.config.js)
+3. Added Jest setup with global mocks (jest.setup.js)
+4. Updated the workflow to ensure it uses the feature branch
+5. Added detailed error reporting
+
+These changes should help diagnose and fix the test failures.
