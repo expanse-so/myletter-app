@@ -2,9 +2,12 @@ name: Direct Test Result
 
 on:
   workflow_dispatch:
+  issue_comment:
+    types: [created]
 
 jobs:
   test:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.issue.pull_request && github.event.comment.body == '/direct-test') }}
     runs-on: ubuntu-latest
     
     steps:
