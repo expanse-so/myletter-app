@@ -10,7 +10,8 @@ import {
   Search, 
   Settings, 
   User, 
-  X 
+  X,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +72,9 @@ export function DashboardLayout({
               <Link href="/dashboard" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                 Dashboard
               </Link>
+              <Link href="/dashboard/editor" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Editor
+              </Link>
               <Link href="/newsletters" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Newsletters
               </Link>
@@ -111,6 +115,14 @@ export function DashboardLayout({
             >
               <LayoutDashboard className="h-5 w-5 text-foreground" />
               <span className="text-foreground">Dashboard</span>
+            </Link>
+            <Link 
+              href="/dashboard/editor" 
+              className="flex items-center gap-3 p-2 rounded-md hover:bg-accent"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <Edit className="h-5 w-5 text-muted-foreground" />
+              <span className="text-muted-foreground">Editor</span>
             </Link>
             <Link 
               href="/newsletters" 
