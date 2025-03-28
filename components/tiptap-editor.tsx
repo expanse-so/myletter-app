@@ -11,6 +11,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import { useCallback, useEffect } from 'react'
 import { Button } from './ui/button'
+import { JSONContent } from '@tiptap/core'
 import { 
   Bold, 
   Italic, 
@@ -30,7 +31,7 @@ import {
 
 interface TipTapEditorProps {
   initialContent?: string
-  onChange?: (html: string) => void
+  onChange?: (html: string, json?: JSONContent) => void
   placeholder?: string
   editable?: boolean
   className?: string
@@ -73,7 +74,8 @@ export function TipTapEditor({
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
-      onChange?.(editor.getHTML())
+      // Pass both HTML and JSON content
+      onChange?.(editor.getHTML(), editor.getJSON())
     },
     editable,
   })
