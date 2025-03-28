@@ -1,0 +1,40 @@
+name: Direct Test Result
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: feature/testing-implementation
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests with output capture
+      run: |
+        npm test || true
+        echo "TEST_OUTPUT<<EOF" >> $GITHUB_ENV
+        cat test-output.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+      
+    - name: Create results file
+      run: |
+        echo "${{ env.TEST_OUTPUT }}" > test-results.md
+      
+    - name: Commit and push test results
+      uses: EndBug/add-and-commit@v9
+      with:
+        add: 'test-results.md'
+        message: 'Add test results'
+        push: true
