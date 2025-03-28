@@ -1,0 +1,84 @@
+name: Artifacts-Only Test Runner
+
+on:
+  workflow_dispatch:  # Allow manual triggering
+  push:
+    paths:
+      - 'test-triggers/run-artifacts-test.md'
+      - '__tests__/**'
+      - 'jest.config.js'
+      - 'jest.setup.js'
+      - 'package.json'
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: List test files
+        run: |
+          echo "Test files:"
+          find __tests__ -type f -name "*.test.js" || echo "No test files found"
+          
+      - name: Run tests
+        run: |
+          mkdir -p test-results
+          # Run tests and capture outputs
+          npm test -- --json --outputFile=test-results/jest-output.json || true
+          npm test -- --verbose > test-results/detailed-output.txt || true
+          
+          # Create summary file
+          echo "Test execution completed at $(date)" > test-results/summary.txt
+          echo "Branch: ${{ github.ref }}" >> test-results/summary.txt
+          echo "Commit: ${{ github.sha }}" >> test-results/summary.txt
+          
+          # Create a Markdown report
+          echo "# Test Results" > test-results/report.md
+          echo "" >> test-results/report.md
+          echo "## Test Execution" >> test-results/report.md
+          echo "- Date: $(date)" >> test-results/report.md
+          echo "- Branch: ${{ github.ref }}" >> test-results/report.md
+          echo "- Commit: ${{ github.sha }}" >> test-results/report.md
+          echo "" >> test-results/report.md
+          
+          # Add test summary if JSON file exists
+          if [ -f test-results/jest-output.json ]; then
+            # Use jq to extract test counts if available
+            if command -v jq &> /dev/null; then
+              totalTests=$(jq '.numTotalTests // 0' test-results/jest-output.json)
+              passedTests=$(jq '.numPassedTests // 0' test-results/jest-output.json)
+              failedTests=$(jq '.numFailedTests // 0' test-results/jest-output.json)
+              
+              echo "## Test Summary" >> test-results/report.md
+              echo "- Total Tests: $totalTests" >> test-results/report.md
+              echo "- Passed Tests: $passedTests" >> test-results/report.md
+              echo "- Failed Tests: $failedTests" >> test-results/report.md
+            else
+              echo "## Test Summary" >> test-results/report.md
+              echo "- Test results available in the JSON file" >> test-results/report.md
+            fi
+          else
+            echo "## Test Summary" >> test-results/report.md
+            echo "- No test results JSON file was generated" >> test-results/report.md
+          fi
+          
+          echo "" >> test-results/report.md
+          echo "## Detailed Results" >> test-results/report.md
+          echo "See the detailed-output.txt file for complete test output." >> test-results/report.md
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
