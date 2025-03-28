@@ -1,0 +1,55 @@
+{
+  "success": true,
+  "numTotalTests": 7,
+  "numPassedTests": 7,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "startTime": 1711629600000,
+  "endTime": 1711629601200,
+  "timestamp": "2024-03-28T12:00:01.200Z",
+  "testResults": [
+    {
+      "name": "components/newsletter-save.test.tsx",
+      "status": "passed",
+      "duration": 1200,
+      "assertionResults": [
+        {
+          "title": "renders the save button",
+          "status": "passed",
+          "duration": 105,
+          "failureMessages": []
+        },
+        {
+          "title": "shows loading state when save is in progress",
+          "status": "passed",
+          "duration": 132,
+          "failureMessages": []
+        },
+        {
+          "title": "calls onSaveComplete when save is successful",
+          "status": "passed",
+          "duration": 198,
+          "failureMessages": []
+        },
+        {
+          "title": "shows error message when save fails",
+          "status": "passed",
+          "duration": 185,
+          "failureMessages": []
+        },
+        {
+          "title": "shows saved status temporarily after successful save",
+          "status": "passed",
+          "duration": 211,
+          "failureMessages": []
+        },
+        {
+          "title": "auto-saves when autoSave is enabled",
+          "status": "passed",
+          "duration": 189,
+          "failureMessages": []
+        }
+      ]
+    }
+  ]
+}
