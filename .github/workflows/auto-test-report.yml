@@ -13,6 +13,7 @@ on:
       - 'jest.config.js'
       - 'tsconfig.json'
       - 'test-triggers/**'
+      - '.github/workflows/auto-test-report.yml'
 
 jobs:
   test-and-report:
@@ -25,154 +26,101 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
+          
+      - name: Display environment information
+        run: |
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
           
       - name: Install dependencies
         run: npm install
         
-      - name: Display branch and files
+      - name: Display test files
         run: |
-          echo "Current branch: ${{ github.ref }}"
-          echo "Files in workspace:"
-          ls -la
+          echo "Tests directory contents:"
+          find __tests__ -type f -name "*.test.js" -o -name "*.test.ts" -o -name "*.test.jsx" -o -name "*.test.tsx"
           
-      - name: Run tests with detailed reporting
-        id: run_tests
+      - name: Run tests
         run: |
           # Create test results directory
           mkdir -p test-results
           
-          # Run tests and capture output in both machine and human readable formats
+          # Run tests with different outputs
+          echo "Running tests with JSON output..."
           npm test -- --json --outputFile=test-results/jest-output.json || true
+          
+          echo "Running tests with verbose output..."
           npm test -- --verbose > test-results/detailed-output.txt || true
           
-          # Extract test counts and save a summary
-          echo "Analyzing test results..."
+          echo "Test outputs:"
+          ls -la test-results/
           
-          # Process the JSON output to create summary and results files
-          node -e '
-            const fs = require("fs");
-            try {
-              // Read jest output
-              const jestOutput = JSON.parse(fs.readFileSync("test-results/jest-output.json", "utf8"));
-              
-              // Calculate stats
-              const totalTests = jestOutput.numTotalTests;
-              const passedTests = jestOutput.numPassedTests;
-              const failedTests = jestOutput.numFailedTests;
-              
-              // Create summary object
-              const summary = {
-                timestamp: new Date().toISOString(),
-                branch: process.env.GITHUB_REF,
-                commit: process.env.GITHUB_SHA,
-                totalTests,
-                passedTests,
-                failedTests,
-                testResults: jestOutput.testResults.map(result => ({
-                  name: result.name,
-                  status: result.status,
-                  passed: result.numPassingTests,
-                  failed: result.numFailingTests,
-                  errors: result.failureMessage 
-                    ? [result.failureMessage] 
-                    : (result.assertionResults 
-                        ? result.assertionResults
-                            .filter(a => a.status === "failed")
-                            .map(a => ({ 
-                              title: a.title,
-                              fullName: a.fullName,
-                              status: a.status,
-                              failureMessages: a.failureMessages
-                            }))
-                        : [])
-                }))
-              };
-              
-              // Write summary to file
-              fs.writeFileSync(
-                "test-results/summary.json", 
-                JSON.stringify(summary, null, 2)
-              );
-              
-              // Create a markdown report
-              const mdReport = `# Test Results
-              
-## Summary
-- **Total Tests:** ${totalTests}
-- **Passed:** ${passedTests}
-- **Failed:** ${failedTests}
-- **Date:** ${new Date().toISOString()}
-- **Branch:** ${process.env.GITHUB_REF}
-- **Commit:** ${process.env.GITHUB_SHA}
-
-## Failed Tests
-${summary.testResults
-  .filter(r => r.failed > 0)
-  .map(r => `
-### ${r.name}
-- Status: ${r.status}
-- Failed: ${r.failed}
-
-${r.errors.length > 0 
-  ? r.errors.map(e => typeof e === "string" 
-    ? `\`\`\`
-${e}
-\`\`\`` 
-    : `- **${e.title}**
-\`\`\`
-${e.failureMessages.join("\n")}
-\`\`\``
-  ).join("\n") 
-  : "No detailed error information available"}
-`).join("\n") || "No failed tests"}
-
-## Passed Tests
-${summary.testResults
-  .filter(r => r.failed === 0)
-  .map(r => `- ${r.name}: ${r.passed} tests passed`)
-  .join("\n") || "No passed tests"}
-`;
-              
-              // Write markdown report
-              fs.writeFileSync("test-results/report.md", mdReport);
-              
-              // Output for GitHub Actions
-              console.log(`::set-output name=total::${totalTests}`);
-              console.log(`::set-output name=passed::${passedTests}`);
-              console.log(`::set-output name=failed::${failedTests}`);
-              
-            } catch (error) {
-              console.error("Error processing test results:", error);
-              // Create fallback summary if JSON processing failed
-              const summary = {
-                timestamp: new Date().toISOString(),
-                branch: process.env.GITHUB_REF,
-                commit: process.env.GITHUB_SHA,
-                error: "Failed to process test results: " + error.message
-              };
-              fs.writeFileSync("test-results/summary.json", JSON.stringify(summary, null, 2));
-              fs.writeFileSync("test-results/report.md", "# Test Results\n\nAn error occurred when processing test results: " + error.message);
-            }
-          '
+      - name: Process test results
+        run: |
+          echo "Creating test summary..."
           
-          echo "Test processing complete."
-      
-      - name: Upload test results as artifacts
+          # Simple summary if the JSON parsing fails
+          if [ ! -f "test-results/jest-output.json" ]; then
+            echo "{\"error\": \"No test results generated\", \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}" > test-results/summary.json
+            echo "# Test Results\n\nNo test results were generated. This could indicate a setup issue." > test-results/report.md
+          else
+            # Create a basic summary from the Jest output
+            node -e '
+              try {
+                const fs = require("fs");
+                const results = JSON.parse(fs.readFileSync("test-results/jest-output.json", "utf8"));
+                
+                const summary = {
+                  timestamp: new Date().toISOString(),
+                  totalTests: results.numTotalTests || 0,
+                  passedTests: results.numPassedTests || 0,
+                  failedTests: results.numFailedTests || 0,
+                  testResults: results.testResults || []
+                };
+                
+                fs.writeFileSync("test-results/summary.json", JSON.stringify(summary, null, 2));
+                
+                let markdownReport = `# Test Results\n\n## Summary\n- Total: ${summary.totalTests}\n- Passed: ${summary.passedTests}\n- Failed: ${summary.failedTests}\n`;
+                
+                if (summary.failedTests > 0) {
+                  markdownReport += "\n## Failures\n";
+                  for (const result of summary.testResults) {
+                    if (result.status === "failed") {
+                      markdownReport += `\n### ${result.name}\n${result.message || "No error details available"}\n`;
+                    }
+                  }
+                }
+                
+                fs.writeFileSync("test-results/report.md", markdownReport);
+              } catch (error) {
+                console.error("Error processing results:", error);
+                fs.writeFileSync("test-results/error.txt", "Error: " + error.toString());
+                fs.writeFileSync("test-results/summary.json", JSON.stringify({
+                  error: error.toString(),
+                  timestamp: new Date().toISOString()
+                }, null, 2));
+              }
+            '
+          fi
+          
+          echo "Test processing complete"
+          echo "Contents of test-results directory:"
+          ls -la test-results/
+          
+      - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: test-results/
           
-      - name: Show test summary
-        run: |
-          echo "Test Results Summary:"
-          cat test-results/summary.json | jq .
-          
       - name: Commit test results
         run: |
+          echo "Committing test results..."
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add test-results/
-          git commit -m "Update test results [skip ci]" || echo "No test result changes to commit"
+          git commit -m "Update test results [skip ci]" || echo "No changes to commit"
           git push
