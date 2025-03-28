@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, TrendingUp, Users, Mail } from 'lucide-react';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   // Normally we would fetch this data from an API
@@ -32,9 +33,11 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back! Here's an overview of your newsletters.</p>
           </div>
-          <Button className="w-full md:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Newsletter
+          <Button className="w-full md:w-auto" asChild>
+            <Link href="/dashboard/editor">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Newsletter
+            </Link>
           </Button>
         </div>
 
@@ -104,8 +107,10 @@ export default function DashboardPage() {
                       <Badge variant={newsletter.status === 'published' ? 'default' : 'secondary'}>
                         {newsletter.status}
                       </Badge>
-                      <Button variant="outline" size="sm">
-                        View
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/dashboard/editor?id=${newsletter.id}`}>
+                          View
+                        </Link>
                       </Button>
                     </div>
                   </div>
@@ -113,9 +118,11 @@ export default function DashboardPage() {
                 {mockNewsletters.length === 0 && (
                   <div className="text-center py-6">
                     <p className="text-muted-foreground">No newsletters yet</p>
-                    <Button variant="secondary" className="mt-2">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Create your first newsletter
+                    <Button variant="secondary" className="mt-2" asChild>
+                      <Link href="/dashboard/editor">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create your first newsletter
+                      </Link>
                     </Button>
                   </div>
                 )}
