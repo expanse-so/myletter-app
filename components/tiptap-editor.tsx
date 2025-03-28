@@ -13,6 +13,9 @@ interface TipTapEditorProps {
 }
 
 export function TipTapEditor({ initialContent, onChange, placeholder = 'Start writing...' }: TipTapEditorProps) {
+  const [linkUrl, setLinkUrl] = useState('');
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -35,7 +38,7 @@ export function TipTapEditor({ initialContent, onChange, placeholder = 'Start wr
 
   useEffect(() => {
     if (editor && initialContent) {
-      editor.setContent(initialContent);
+      editor.commands.setContent(initialContent);
     }
   }, [editor, initialContent]);
 
@@ -43,54 +46,79 @@ export function TipTapEditor({ initialContent, onChange, placeholder = 'Start wr
     return <div>Loading editor...</div>;
   }
 
+  const handleLinkSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (linkUrl) {
+      editor.chain().focus().setLink({ href: linkUrl }).run();
+    } else {
+      editor.chain().focus().unsetLink().run();
+    }
+    setShowLinkDialog(false);
+    setLinkUrl('');
+  };
+
   return (
     <div className="tiptap-editor">
       <div className="editor-toolbar">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={editor.isActive('bold') ? 'is-active' : ''}
-          aria-label="bold"
+          title="Bold"
         >
           Bold
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={editor.isActive('italic') ? 'is-active' : ''}
-          aria-label="italic"
+          title="Italic"
         >
           Italic
         </button>
         <button
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={editor.isActive('bulletList') ? 'is-active' : ''}
+          title="Bullet List"
+        >
+          Bullet List
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={editor.isActive('orderedList') ? 'is-active' : ''}
+          title="Ordered List"
+        >
+          Ordered List
+        </button>
+        <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           className={editor.isActive('heading', { level: 2 }) ? 'is-active' : ''}
-          aria-label="heading"
+          title="Heading 2"
         >
-          Heading
+          Heading 2
         </button>
         <button
-          onClick={() => {
-            const url = window.prompt('Enter image URL');
-            if (url) {
-              editor.chain().focus().setImage({ src: url }).run();
-            }
-          }}
-          aria-label="image"
-        >
-          Image
-        </button>
-        <button
-          onClick={() => {
-            const url = window.prompt('Enter link URL');
-            if (url) {
-              editor.chain().focus().toggleLink({ href: url }).run();
-            }
-          }}
+          onClick={() => setShowLinkDialog(!showLinkDialog)}
           className={editor.isActive('link') ? 'is-active' : ''}
-          aria-label="link"
+          title="Link"
         >
           Link
         </button>
       </div>
+      
+      {showLinkDialog && (
+        <div className="link-dialog">
+          <form onSubmit={handleLinkSubmit}>
+            <input
+              type="text"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com"
+            />
+            <button type="submit">Save</button>
+            <button type="button" onClick={() => setShowLinkDialog(false)}>Cancel</button>
+          </form>
+        </div>
+      )}
+      
       <EditorContent editor={editor} />
     </div>
   );
