@@ -2,6 +2,13 @@ name: Run All Tests
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/testing-implementation
+    paths:
+      - '__tests__/**'
+      - '.github/workflows/**'
+      - 'test-triggers/**'
 
 jobs:
   setup-and-test:
@@ -156,7 +163,7 @@ jobs:
         mkdir -p test-results
         echo "# ACTUAL TEST EXECUTION RESULTS" > test-results/real-test-output.md
         echo '```' >> test-results/real-test-output.md
-        npx jest --testMatch=\"**/__tests__/**/*.test.[jt]s?(x)\" --verbose > test-results/jest-output.txt 2>&1 || true
+        npx jest --testMatch="**/__tests__/**/*.test.[jt]s?(x)" --verbose > test-results/jest-output.txt 2>&1 || true
         cat test-results/jest-output.txt >> test-results/real-test-output.md
         echo '```' >> test-results/real-test-output.md
       
