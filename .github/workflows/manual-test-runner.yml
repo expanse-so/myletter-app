@@ -1,7 +1,12 @@
 name: Run Tests On-Demand
 
 on:
-  workflow_dispatch:  # This makes the workflow run manually when you trigger it
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches:
+      - feature/testing-implementation
+    paths:
+      - 'test-triggers/run-now.md'
 
 jobs:
   run-tests:
