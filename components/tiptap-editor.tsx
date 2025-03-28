@@ -1,233 +1,97 @@
-"use client"
-
-import { useEditor, EditorContent, Editor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
-import Placeholder from '@tiptap/extension-placeholder'
-import Table from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableCell from '@tiptap/extension-table-cell'
-import TableHeader from '@tiptap/extension-table-header'
-import { useCallback, useEffect } from 'react'
-import { Button } from './ui/button'
-import { 
-  Bold, 
-  Italic, 
-  Heading1, 
-  Heading2, 
-  List, 
-  ListOrdered, 
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Undo,
-  Redo,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Table as TableIcon
-} from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Heading from '@tiptap/extension-heading';
+import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
 
 interface TipTapEditorProps {
-  initialContent?: string
-  onChange?: (html: string) => void
-  placeholder?: string
-  editable?: boolean
-  className?: string
-  onEditorReady?: (editor: Editor) => void
+  initialContent?: string;
+  onChange?: (html: string) => void;
+  placeholder?: string;
 }
 
-export function TipTapEditor({ 
-  initialContent = '<h1>My Newsletter</h1><p>Start writing your amazing content...</p>', 
-  onChange,
-  placeholder = 'Write something amazing...',
-  editable = true,
-  className = '',
-  onEditorReady
-}: TipTapEditorProps) {
+export function TipTapEditor({ initialContent, onChange, placeholder = 'Start writing...' }: TipTapEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        heading: false, // disable to avoid conflicts
+      StarterKit,
+      Heading.configure({
+        levels: [1, 2, 3, 4],
       }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'mx-auto my-4 rounded-md max-w-full',
-        },
-      }),
+      Image,
       Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline',
-        },
+        openOnClick: true,
       }),
       Placeholder.configure({
         placeholder,
       }),
-      Table.configure({
-        resizable: true,
-      }),
-      TableRow,
-      TableHeader,
-      TableCell,
     ],
-    content: initialContent,
+    content: initialContent || '<p></p>',
     onUpdate: ({ editor }) => {
-      onChange?.(editor.getHTML())
+      onChange && onChange(editor.getHTML());
     },
-    editable,
-  })
+  });
 
   useEffect(() => {
-    if (editor && initialContent && !editor.getText()) {
-      editor.commands.setContent(initialContent)
+    if (editor && initialContent) {
+      editor.setContent(initialContent);
     }
-  }, [editor, initialContent])
-
-  useEffect(() => {
-    if (editor && onEditorReady) {
-      onEditorReady(editor)
-    }
-  }, [editor, onEditorReady])
-
-  const addImage = useCallback(() => {
-    const url = window.prompt('URL')
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run()
-    }
-  }, [editor])
-
-  const setLink = useCallback(() => {
-    const previousUrl = editor?.getAttributes('link').href
-    const url = window.prompt('URL', previousUrl)
-    
-    // cancelled
-    if (url === null) {
-      return
-    }
-
-    // empty
-    if (url === '') {
-      editor?.chain().focus().extendMarkRange('link').unsetLink().run()
-      return
-    }
-
-    // update link
-    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
-  }, [editor])
-
-  const addTable = useCallback(() => {
-    editor?.chain().focus().insertTable({ rows: 3, cols: 3 }).run()
-  }, [editor])
+  }, [editor, initialContent]);
 
   if (!editor) {
-    return <div>Loading editor...</div>
+    return <div>Loading editor...</div>;
   }
 
   return (
-    <div className={`flex flex-col h-full border rounded-lg ${className}`}>
-      <div className="border-b p-2 flex flex-wrap gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
+    <div className="tiptap-editor">
+      <div className="editor-toolbar">
+        <button
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive('bold') ? 'bg-muted' : ''}
-          title="Bold"
+          className={editor.isActive('bold') ? 'is-active' : ''}
+          aria-label="bold"
         >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+          Bold
+        </button>
+        <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive('italic') ? 'bg-muted' : ''}
-          title="Italic"
+          className={editor.isActive('italic') ? 'is-active' : ''}
+          aria-label="italic"
         >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={editor.isActive('heading', { level: 1 }) ? 'bg-muted' : ''}
-          title="Heading 1"
-        >
-          <Heading1 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+          Italic
+        </button>
+        <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive('heading', { level: 2 }) ? 'bg-muted' : ''}
-          title="Heading 2"
+          className={editor.isActive('heading', { level: 2 }) ? 'is-active' : ''}
+          aria-label="heading"
         >
-          <Heading2 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive('bulletList') ? 'bg-muted' : ''}
-          title="Bullet List"
+          Heading
+        </button>
+        <button
+          onClick={() => {
+            const url = window.prompt('Enter image URL');
+            if (url) {
+              editor.chain().focus().setImage({ src: url }).run();
+            }
+          }}
+          aria-label="image"
         >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive('orderedList') ? 'bg-muted' : ''}
-          title="Ordered List"
+          Image
+        </button>
+        <button
+          onClick={() => {
+            const url = window.prompt('Enter link URL');
+            if (url) {
+              editor.chain().focus().toggleLink({ href: url }).run();
+            }
+          }}
+          className={editor.isActive('link') ? 'is-active' : ''}
+          aria-label="link"
         >
-          <ListOrdered className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={setLink}
-          className={editor.isActive('link') ? 'bg-muted' : ''}
-          title="Link"
-        >
-          <LinkIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={addImage}
-          title="Image"
-        >
-          <ImageIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={addTable}
-          title="Insert Table"
-        >
-          <TableIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={!editor.can().undo()}
-          title="Undo"
-        >
-          <Undo className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={!editor.can().redo()}
-          title="Redo"
-        >
-          <Redo className="h-4 w-4" />
-        </Button>
+          Link
+        </button>
       </div>
-      <div className="flex-1 overflow-auto">
-        <EditorContent editor={editor} className="p-4 min-h-full prose prose-sm max-w-none" />
-      </div>
+      <EditorContent editor={editor} />
     </div>
-  )
+  );
 }
