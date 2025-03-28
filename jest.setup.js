@@ -1,78 +1,70 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Mock Next.js router
-jest.mock('next/navigation', () => ({
-  useRouter: jest.fn(() => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    prefetch: jest.fn(),
-    back: jest.fn(),
-    pathname: '/',
-    query: {},
-  })),
-  useSearchParams: jest.fn(() => ({
-    get: jest.fn(),
-  })),
-  usePathname: jest.fn(() => '/'),
-}));
-
-// Mock IntersectionObserver
-class MockIntersectionObserver {
-  constructor(callback) {
-    this.callback = callback;
-  }
-  observe() {
-    return null;
-  }
-  unobserve() {
-    return null;
-  }
-  disconnect() {
-    return null;
-  }
+// Polyfill for ResizeObserver required by TipTap
+if (typeof window !== 'undefined') {
+  window.ResizeObserver = jest.fn().mockImplementation(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn()
+  }));
 }
 
-global.IntersectionObserver = MockIntersectionObserver;
+// Global mocks for TipTap commands
+jest.mock('@tiptap/react', () => ({
+  useEditor: () => ({
+    chain: () => ({
+      focus: () => ({
+        toggleBold: () => ({ run: jest.fn() }),
+        toggleItalic: () => ({ run: jest.fn() }),
+        toggleBulletList: () => ({ run: jest.fn() }),
+        toggleOrderedList: () => ({ run: jest.fn() }),
+        toggleHeading: () => ({ run: jest.fn() }),
+        setLink: () => ({ run: jest.fn() }),
+      }),
+    }),
+    isActive: jest.fn().mockReturnValue(false),
+    getHTML: jest.fn().mockReturnValue('<p>Test content</p>'),
+    commands: {
+      setContent: jest.fn()
+    }
+  }),
+  EditorContent: ({ editor }) => <div data-testid="editor-content">Editor Content</div>,
+}));
 
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // Deprecated
-    removeListener: jest.fn(), // Deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+// Mock implementations for TipTap extensions
+jest.mock('@tiptap/starter-kit', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 
-// Suppress console warnings/errors during testing
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
-console.error = (...args) => {
-  if (
-    /Warning.*not wrapped in act/i.test(args[0]) ||
-    /hydration/i.test(args[0]) ||
-    /Cannot update a component/i.test(args[0])
-  ) {
-    return;
-  }
-  originalConsoleError(...args);
-};
+jest.mock('@tiptap/extension-heading', () => ({
+  __esModule: true,
+  default: {
+    configure: jest.fn().mockReturnValue({})
+  },
+}));
 
-console.warn = (...args) => {
-  if (/react-i18next/i.test(args[0]) || /i18next/i.test(args[0])) {
-    return;
-  }
-  originalConsoleWarn(...args);
-};
+jest.mock('@tiptap/extension-image', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 
-// Clean up
-afterAll(() => {
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
-});
+jest.mock('@tiptap/extension-link', () => ({
+  __esModule: true,
+  default: {
+    configure: jest.fn().mockReturnValue({})
+  },
+}));
+
+jest.mock('@tiptap/extension-placeholder', () => ({
+  __esModule: true,
+  default: {
+    configure: jest.fn().mockReturnValue({})
+  },
+}));
+
+// Mock the API functionality
+jest.mock('./utils/api', () => ({
+  sendMessageToAI: jest.fn().mockResolvedValue({ text: 'AI response', error: null }),
+}));
