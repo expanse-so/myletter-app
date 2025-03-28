@@ -46,9 +46,7 @@ export function TipTapEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        }
+        heading: false, // disable to avoid conflicts
       }),
       Image.configure({
         HTMLAttributes: {
