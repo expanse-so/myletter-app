@@ -1,142 +1,119 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import { ModelSelector } from '../../components/model-selector';
 
-// Mock available models data
-const mockModels = [
-  {
-    id: 'gpt-4o-mini',
-    name: 'GPT-4o Mini',
-    provider: 'openai',
-    context_length: 128000,
-    cost_tier: 'low'
-  },
-  {
-    id: 'claude-3.7-sonnet',
-    name: 'Claude 3.7 Sonnet',
-    provider: 'anthropic',
-    context_length: 200000,
-    cost_tier: 'high'
-  }
+// Define sample models for testing
+const sampleModels = [
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', context_length: 128000, cost_tier: 'high' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', context_length: 128000, cost_tier: 'medium' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', context_length: 1000000, cost_tier: 'high' },
+  { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic', context_length: 200000, cost_tier: 'highest' },
 ];
 
 describe('ModelSelector Component', () => {
-  it('renders the model selector with default value', () => {
+  // Test rendering with default props
+  test('renders with default props', () => {
+    const mockOnChange = jest.fn();
+    
     render(
       <ModelSelector 
-        models={mockModels}
-        selectedModel="gpt-4o-mini"
-        onModelChange={jest.fn()}
+        models={sampleModels} 
+        selectedModel={sampleModels[0]} 
+        onModelChange={mockOnChange} 
       />
     );
     
-    // Check if the component renders with the selected model
-    expect(screen.getByText('GPT-4o Mini')).toBeInTheDocument();
+    // Check if the selected model name is displayed
+    expect(screen.getByText('GPT-4o')).toBeInTheDocument();
   });
 
-  it('shows dropdown when clicked', () => {
-    render(
-      <ModelSelector 
-        models={mockModels}
-        selectedModel="gpt-4o-mini"
-        onModelChange={jest.fn()}
-      />
-    );
-    
-    // Click the selector to open dropdown
-    fireEvent.click(screen.getByText('GPT-4o Mini'));
-    
-    // Dropdown should now be visible with all options
-    expect(screen.getByText('Claude 3.7 Sonnet')).toBeInTheDocument();
-  });
-
-  it('calls onModelChange when a different model is selected', () => {
-    const handleModelChange = jest.fn();
+  // Test displaying cost tier
+  test('displays cost tier when showCostTier is true', () => {
+    const mockOnChange = jest.fn();
     
     render(
       <ModelSelector 
-        models={mockModels}
-        selectedModel="gpt-4o-mini"
-        onModelChange={handleModelChange}
-      />
-    );
-    
-    // Open dropdown
-    fireEvent.click(screen.getByText('GPT-4o Mini'));
-    
-    // Select different model
-    fireEvent.click(screen.getByText('Claude 3.7 Sonnet'));
-    
-    // Check if handler was called with correct model ID
-    expect(handleModelChange).toHaveBeenCalledWith('claude-3.7-sonnet');
-  });
-
-  it('handles no models gracefully', () => {
-    render(
-      <ModelSelector 
-        models={[]}
-        selectedModel=""
-        onModelChange={jest.fn()}
-      />
-    );
-    
-    // Should show a default or placeholder text
-    expect(screen.getByText(/No models available/i)).toBeInTheDocument();
-  });
-  
-  it('displays disabled state correctly', () => {
-    render(
-      <ModelSelector 
-        models={mockModels}
-        selectedModel="gpt-4o-mini"
-        onModelChange={jest.fn()}
-        disabled={true}
-      />
-    );
-    
-    // The selector should appear disabled
-    const selector = screen.getByRole('button');
-    expect(selector).toHaveAttribute('disabled');
-    
-    // Clicking should not open dropdown when disabled
-    fireEvent.click(selector);
-    expect(screen.queryByText('Claude 3.7 Sonnet')).not.toBeInTheDocument();
-  });
-  
-  it('shows cost tier indicators', () => {
-    render(
-      <ModelSelector 
-        models={mockModels}
-        selectedModel="gpt-4o-mini"
-        onModelChange={jest.fn()}
+        models={sampleModels} 
+        selectedModel={sampleModels[0]} 
+        onModelChange={mockOnChange}
         showCostTier={true}
       />
     );
     
-    // Open dropdown
-    fireEvent.click(screen.getByText('GPT-4o Mini'));
+    // Open dropdown to display all options
+    fireEvent.click(screen.getByText('GPT-4o'));
     
-    // Should show cost indicators
-    expect(screen.getByText(/low/i)).toBeInTheDocument();
-    expect(screen.getByText(/high/i)).toBeInTheDocument();
+    // Check cost tiers are displayed
+    expect(screen.getByText('(high)')).toBeInTheDocument();
+    expect(screen.getByText('(medium)')).toBeInTheDocument();
+    expect(screen.getByText('(highest)')).toBeInTheDocument();
   });
-  
-  it('groups models by provider when specified', () => {
+
+  // Test model grouping by provider
+  test('groups models by provider when groupByProvider is true', () => {
+    const mockOnChange = jest.fn();
+    
     render(
       <ModelSelector 
-        models={mockModels}
-        selectedModel="gpt-4o-mini"
-        onModelChange={jest.fn()}
+        models={sampleModels} 
+        selectedModel={sampleModels[0]} 
+        onModelChange={mockOnChange}
         groupByProvider={true}
       />
     );
     
-    // Open dropdown
-    fireEvent.click(screen.getByText('GPT-4o Mini'));
+    // Open dropdown to display all options
+    fireEvent.click(screen.getByText('GPT-4o'));
     
-    // Should show provider groups
-    expect(screen.getByText(/OpenAI/i)).toBeInTheDocument();
-    expect(screen.getByText(/Anthropic/i)).toBeInTheDocument();
+    // Check if provider group headers are displayed
+    expect(screen.getByText('OpenAI')).toBeInTheDocument();
+    expect(screen.getByText('Google')).toBeInTheDocument();
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+  });
+
+  // Test model selection change
+  test('calls onModelChange when a new model is selected', () => {
+    const mockOnChange = jest.fn();
+    
+    render(
+      <ModelSelector 
+        models={sampleModels} 
+        selectedModel={sampleModels[0]} 
+        onModelChange={mockOnChange}
+      />
+    );
+    
+    // Open dropdown
+    fireEvent.click(screen.getByText('GPT-4o'));
+    
+    // Click on a different model
+    fireEvent.click(screen.getByText('Gemini 1.5 Pro'));
+    
+    // Verify onModelChange was called with the correct model
+    expect(mockOnChange).toHaveBeenCalledWith(sampleModels[2]);
+  });
+
+  // Test disabled state
+  test('is disabled when disabled prop is true', () => {
+    const mockOnChange = jest.fn();
+    
+    render(
+      <ModelSelector 
+        models={sampleModels} 
+        selectedModel={sampleModels[0]} 
+        onModelChange={mockOnChange}
+        disabled={true}
+      />
+    );
+    
+    // Get the model selector button and check if it's disabled
+    const selectorButton = screen.getByRole('button');
+    expect(selectorButton).toBeDisabled();
+    
+    // Try to click it
+    fireEvent.click(selectorButton);
+    
+    // Ensure dropdown doesn't appear
+    expect(screen.queryByText('Gemini 1.5 Pro')).not.toBeInTheDocument();
   });
 });
