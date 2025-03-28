@@ -7,9 +7,6 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import Table from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableCell from '@tiptap/extension-table-cell'
-import TableHeader from '@tiptap/extension-table-header'
 import { useCallback, useEffect } from 'react'
 import { Button } from './ui/button'
 import { 
@@ -67,9 +64,6 @@ export function TipTapEditor({
       Table.configure({
         resizable: true,
       }),
-      TableRow,
-      TableCell,
-      TableHeader,
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
@@ -111,7 +105,7 @@ export function TipTapEditor({
   }, [editor])
 
   const addTable = useCallback(() => {
-    editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+    editor?.chain().focus().insertTable({ rows: 3, cols: 3 }).run()
   }, [editor])
 
   if (!editor) {
@@ -199,33 +193,6 @@ export function TipTapEditor({
           title="Insert Table"
         >
           <TableIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          className={editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}
-          title="Align Left"
-        >
-          <AlignLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          className={editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}
-          title="Align Center"
-        >
-          <AlignCenter className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          className={editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}
-          title="Align Right"
-        >
-          <AlignRight className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
