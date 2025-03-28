@@ -1,0 +1,31 @@
+name: Test Workflow Check
+
+# This workflow can be manually triggered
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/github-actions-artifact
+    paths:
+      - '.github/workflows/test-workflow-check.yml'
+
+jobs:
+  test-workflow:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Create test output
+      run: |
+        mkdir -p test-output
+        echo "# Test Result" > test-output/result.md
+        echo "This is a simple test run at $(date)" >> test-output/result.md
+        echo "All tests are passing!" >> test-output/result.md
+    
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-output
+        path: test-output/
+        if-no-files-found: warn
