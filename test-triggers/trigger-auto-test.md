@@ -25,13 +25,19 @@ curl -X POST \
 Simply modify this file (even just adding a timestamp below) and commit to trigger a new test run.
 
 ## Latest Test Run Trigger
-Timestamp: 2025-03-28T21:17:30Z  
+Timestamp: 2025-03-28T21:19:30Z  
 
-This workflow will:
-1. Run all tests
-2. Generate detailed test results in machine-readable JSON
-3. Create a human-readable summary in Markdown
-4. Commit the results back to the repository
-5. The AI can then read these results directly using GitHub tools
+This workflow will now run with the following real tests:
+1. ModelSelector.test.js
+2. TipTapEditor.test.js
+3. CursorChatInterface.test.js
+4. SplitViewLayout.test.js
+5. utils.test.js (API)
 
-The results will be automatically committed to `test-results/` in the repository, allowing the AI to analyze them without human intervention - aligning with the Expanse philosophy of removing humans from implementation loops.
+All tests have been properly configured with:
+- jest.config.js
+- jest.setup.js
+- Updated package.json with test dependencies
+- API implementation in utils/api.ts
+
+This will provide real test results that the AI can read directly without human intervention, aligning with the Expanse philosophy of removing humans from implementation loops.
