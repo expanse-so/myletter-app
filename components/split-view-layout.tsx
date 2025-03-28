@@ -1,19 +1,14 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef } from "react"
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
 import { TipTapEditor } from "./tiptap-editor"
-import { CursorChatInterface } from "./cursor-chat-interface"
-
-interface Message {
-  id: number
-  content: string
-  sender: "user" | "ai"
-}
+import { AIChatInterface } from "./ai-chat-interface"
+import { Editor } from '@tiptap/react'
 
 interface SplitViewLayoutProps {
   children?: React.ReactNode
@@ -33,21 +28,15 @@ export function SplitViewLayout({
   onEditorChange,
 }: SplitViewLayoutProps) {
   const [editorHtml, setEditorHtml] = useState(initialContent || '<h1>My Newsletter</h1><p>Start writing your amazing content...</p>')
+  const editorRef = useRef<Editor | null>(null)
   
   const handleEditorChange = (html: string) => {
     setEditorHtml(html)
     onEditorChange?.(html)
   }
   
-  const handleSendMessage = async (message: string): Promise<string> => {
-    // In a real implementation, this would call your AI API
-    console.log("Message to AI:", message)
-    console.log("Current editor content:", editorHtml)
-    
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    
-    return "I can help you with that! Let me suggest some ideas for your newsletter content. Would you like me to help with formatting, generate content ideas, or suggest improvements to what you've written?"
+  const handleEditorReady = (editor: Editor) => {
+    editorRef.current = editor
   }
 
   return (
@@ -63,14 +52,16 @@ export function SplitViewLayout({
               onChange={handleEditorChange}
               placeholder="Write your newsletter here..."
               className="h-full"
+              onEditorReady={handleEditorReady}
             />
           )}
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={defaultChatSize} minSize={30}>
-        <CursorChatInterface
-          onSendMessage={handleSendMessage}
+        <AIChatInterface
+          editor={editorRef.current}
+          editorContent={editorHtml}
         />
       </ResizablePanel>
     </ResizablePanelGroup>
