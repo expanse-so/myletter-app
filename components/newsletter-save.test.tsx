@@ -2,6 +2,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NewsletterSave } from './newsletter-save';
 
+// Mock variable for createClient
+const createClient = vi.fn();
+
 // Mock Supabase client
 vi.mock('@/lib/supabase', () => ({
   createClient: vi.fn(() => ({
