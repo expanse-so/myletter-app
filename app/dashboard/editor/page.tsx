@@ -1,28 +1,30 @@
-"use client"
+'use client';
 
-import { SplitViewLayout } from "@/components/split-view-layout"
-import { useState } from "react"
-import { PageHeader } from "@/components/page-header"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardEditorPage() {
-  const [content, setContent] = useState("")
-
-  const handleEditorChange = (html: string) => {
-    setContent(html)
-    // In a real app, you might want to save this to a database
-    console.log("Editor content changed:", html)
-  }
-
+  const [content, setContent] = useState<string>('');
+  
   return (
-    <div className="space-y-4">
-      <PageHeader
-        heading="Newsletter Editor"
-        text="Create your newsletter with our AI-powered editor."
-      />
-      <SplitViewLayout
-        initialContent="<h1>My Newsletter</h1><p>Welcome to MyLetter! Start writing your amazing newsletter here.</p>"
-        onEditorChange={handleEditorChange}
-      />
+    <div className="container p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Newsletter Editor</h1>
+        <p className="text-muted-foreground">Create and edit your newsletter content</p>
+      </div>
+      
+      <div className="border rounded-md p-4">
+        <textarea
+          className="w-full min-h-[300px] p-3 border rounded-md"
+          placeholder="Start writing your newsletter content here..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+        />
+        
+        <div className="mt-4 flex justify-end">
+          <Button>Save Draft</Button>
+        </div>
+      </div>
     </div>
-  )
+  );
 }
