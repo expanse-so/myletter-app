@@ -4,8 +4,13 @@ import { useState, useEffect } from 'react';
 import { SubscriberList } from '@/components/subscriber-list';
 import { SubscriberForm } from '@/components/subscriber-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { Newsletter } from '@/types/database';
+
+// Create Supabase client directly in this component to avoid circular dependencies
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function SubscribersPage() {
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
