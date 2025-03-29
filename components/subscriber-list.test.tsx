@@ -1,7 +1,7 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SubscriberList } from './subscriber-list';
-import { supabase } from '@/lib/supabase';
 
 // Mock Supabase
 vi.mock('@/lib/supabase', () => ({
@@ -12,6 +12,9 @@ vi.mock('@/lib/supabase', () => ({
     delete: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
   }
 }));
 
@@ -26,9 +29,10 @@ describe('SubscriberList Component', () => {
     vi.clearAllMocks();
     
     // Mock successful fetch
-    supabase.from().select.mockResolvedValue({
+    vi.mocked(supabase.from().select).mockResolvedValue({
       data: mockSubscribers,
-      error: null
+      error: null,
+      count: mockSubscribers.length
     });
   });
 
@@ -50,7 +54,7 @@ describe('SubscriberList Component', () => {
   });
 
   it('should handle deleting a subscriber', async () => {
-    supabase.from().delete.mockResolvedValue({
+    vi.mocked(supabase.from().delete().eq).mockResolvedValue({
       data: { id: '1' },
       error: null
     });
@@ -78,7 +82,7 @@ describe('SubscriberList Component', () => {
   });
 
   it('should handle bulk operations', async () => {
-    supabase.from().delete.mockResolvedValue({
+    vi.mocked(supabase.from().delete().in).mockResolvedValue({
       data: [{ id: '1' }, { id: '2' }],
       error: null
     });
@@ -111,9 +115,10 @@ describe('SubscriberList Component', () => {
   });
 
   it('should handle empty subscriber list', async () => {
-    supabase.from().select.mockResolvedValue({
+    vi.mocked(supabase.from().select).mockResolvedValueOnce({
       data: [],
-      error: null
+      error: null,
+      count: 0
     });
     
     render(<SubscriberList newsletterId="123" />);
@@ -124,9 +129,10 @@ describe('SubscriberList Component', () => {
   });
 
   it('should handle error when fetching subscribers', async () => {
-    supabase.from().select.mockResolvedValue({
+    vi.mocked(supabase.from().select).mockResolvedValueOnce({
       data: null,
-      error: { message: 'Error fetching subscribers' }
+      error: { message: 'Error fetching subscribers' },
+      count: null
     });
     
     render(<SubscriberList newsletterId="123" />);
@@ -137,3 +143,6 @@ describe('SubscriberList Component', () => {
     });
   });
 });
+
+// Helper for TypeScript to recognize the mocked supabase object
+const { supabase } = await import('@/lib/supabase');
