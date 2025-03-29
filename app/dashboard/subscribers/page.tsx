@@ -4,10 +4,20 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../contexts/auth-context';
 
+interface Newsletter {
+  id: string;
+  title: string;
+  description?: string;
+  user_id: string;
+  created_at: string;
+  updated_at?: string;
+  name?: string;
+}
+
 export default function SubscribersPage() {
   const { isAuthenticated, profile } = useAuth();
-  const [newsletters, setNewsletters] = useState([]);
-  const [selectedNewsletterId, setSelectedNewsletterId] = useState(null);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [selectedNewsletterId, setSelectedNewsletterId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('list');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
