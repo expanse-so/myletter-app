@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Get environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'fallback_key_for_build_only'
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Create a single supabase client for the entire app
