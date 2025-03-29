@@ -1,5 +1,12 @@
 {
-  "buildCommand": "next build",
-  "ignoreCommand": "echo 'Skipping prebuild'",
-  "framework": "nextjs"
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
 }
