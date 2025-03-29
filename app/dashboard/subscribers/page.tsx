@@ -4,15 +4,12 @@ import { useState, useEffect } from 'react';
 import { SubscriberList } from '@/components/subscriber-list';
 import { SubscriberForm } from '@/components/subscriber-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 import { Newsletter } from '@/types/database';
-
-// Create Supabase client directly in this component to avoid circular dependencies
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { useAuth } from '@/contexts/auth-context';
 
 export default function SubscribersPage() {
+  const { isAuthenticated, profile } = useAuth();
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [selectedNewsletterId, setSelectedNewsletterId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('list');
@@ -22,21 +19,20 @@ export default function SubscribersPage() {
   // Fetch newsletters to populate the selection dropdown
   useEffect(() => {
     const fetchNewsletters = async () => {
+      if (!isAuthenticated || !profile) {
+        setError('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        
-        // Get user from session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.user) {
-          throw new Error('User not authenticated');
-        }
         
         // Get newsletters owned by the user
         const { data, error } = await supabase
           .from('newsletters')
           .select('*')
-          .eq('user_id', session.user.id);
+          .eq('user_id', profile.id);
         
         if (error) {
           throw error;
@@ -57,7 +53,7 @@ export default function SubscribersPage() {
     };
     
     fetchNewsletters();
-  }, []);
+  }, [isAuthenticated, profile]);
 
   const handleSubscriberAdded = () => {
     // Switch to list view after successful subscription
@@ -66,6 +62,19 @@ export default function SubscribersPage() {
 
   if (loading) {
     return <div className="container p-6 flex justify-center">Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container p-6">
+        <div className="rounded-md border border-red-200 bg-red-50 p-4">
+          <h3 className="text-sm font-medium text-red-800">Authentication Required</h3>
+          <div className="mt-2 text-sm text-red-700">
+            Please <a href="/login" className="underline font-medium">log in</a> to access this page.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
