@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SubscriberList } from '@/components/subscriber-list';
-import { SubscriberForm } from '@/components/subscriber-form';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { Newsletter } from '@/types/database';
 import { useAuth } from '@/contexts/auth-context';
@@ -124,33 +122,31 @@ export default function SubscribersPage() {
         >
           {newsletters.map((newsletter) => (
             <option key={newsletter.id} value={newsletter.id}>
-              {newsletter.name}
+              {newsletter.name || newsletter.title}
             </option>
           ))}
         </select>
       </div>
 
       {selectedNewsletterId && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="list">Subscribers List</TabsTrigger>
-            <TabsTrigger value="add">Add Subscriber</TabsTrigger>
-          </TabsList>
-          <TabsContent value="list">
-            <SubscriberList 
-              newsletterId={selectedNewsletterId} 
-              onAddClick={() => setActiveTab('add')} 
-            />
-          </TabsContent>
-          <TabsContent value="add">
-            <SubscriberForm 
-              newsletterId={selectedNewsletterId}
-              onSuccess={handleSubscriberAdded}
-              title={`Subscribe to ${newsletters.find(n => n.id === selectedNewsletterId)?.name}`}
-              description="Add a new subscriber to your newsletter"
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={() => setActiveTab('list')}>Subscribers List</Button>
+            <Button onClick={() => setActiveTab('add')}>Add Subscriber</Button>
+          </div>
+          
+          <div className="p-4 border rounded-md">
+            {activeTab === 'list' ? (
+              <div className="text-center py-8">
+                <p>Subscriber list will be displayed here once available</p>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p>Add subscriber form will be displayed here once available</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
