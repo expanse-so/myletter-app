@@ -1,40 +1,37 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AddSubscriberForm } from "./add-subscriber-form";
 
 interface SubscriberFormProps {
-  newsletterId?: string;
-  onSuccess?: () => void;
+  newsletterId: string;
+  onSuccess?: (subscriberId: string) => void;
   onCancel?: () => void;
+  title?: string;
+  description?: string;
 }
 
-export function SubscriberForm({ newsletterId, onSuccess, onCancel }: SubscriberFormProps) {
+export function SubscriberForm({ 
+  newsletterId, 
+  onSuccess, 
+  onCancel,
+  title,
+  description 
+}: SubscriberFormProps) {
   return (
-    <div className="space-y-4 p-4 border rounded-md">
-      <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <Input id="email" placeholder="email@example.com" />
-      </div>
+    <div className="space-y-4">
+      {(title || description) && (
+        <div className="mb-6">
+          {title && <h2 className="text-xl font-semibold">{title}</h2>}
+          {description && <p className="text-muted-foreground">{description}</p>}
+        </div>
+      )}
       
-      <div className="space-y-2">
-        <label htmlFor="name" className="text-sm font-medium">
-          Name (Optional)
-        </label>
-        <Input id="name" placeholder="John Doe" />
-      </div>
-      
-      <div className="flex justify-end space-x-2 pt-4">
-        {onCancel && (
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-        <Button>Add Subscriber</Button>
-      </div>
+      <AddSubscriberForm 
+        newsletterId={newsletterId}
+        onSuccess={onSuccess ? subscriberId => onSuccess(subscriberId) : undefined}
+        onCancel={onCancel}
+      />
     </div>
   );
 }
