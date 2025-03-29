@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm i --no-save sonner react-hook-form @hookform/resolvers",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
