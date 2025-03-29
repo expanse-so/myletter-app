@@ -2,8 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
 import { debounce } from '@/lib/utils';
+import { createClient } from '@supabase/supabase-js';
+
+// Create Supabase client directly in this component to avoid circular dependencies
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface NewsletterSaveProps {
   content: string;
