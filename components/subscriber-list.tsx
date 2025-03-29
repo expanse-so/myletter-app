@@ -54,10 +54,15 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
-import { supabase } from "@/lib/supabase"
+import { createClient } from '@supabase/supabase-js'
 import { DeleteSubscriberDialog } from "./delete-subscriber-dialog"
 import { useState, useEffect } from "react"
 import { Subscriber } from "@/types/database"
+
+// Create Supabase client directly in this component to avoid circular dependencies
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type SubscriberWithDateStr = Omit<Subscriber, 'created_at' | 'updated_at'> & {
   created_at: string;
