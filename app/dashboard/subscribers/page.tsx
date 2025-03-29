@@ -10,7 +10,7 @@ export default function SubscribersPage() {
   const [selectedNewsletterId, setSelectedNewsletterId] = useState(null);
   const [activeTab, setActiveTab] = useState('list');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch newsletters to populate the selection dropdown
   useEffect(() => {
