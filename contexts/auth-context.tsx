@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
 interface Profile {
   id: string;
@@ -19,6 +20,11 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
+// Create Supabase client directly in this file to avoid circular dependencies
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -30,17 +36,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // This would typically be an API call to check the session
-        const token = localStorage.getItem('auth_token');
+        // Get the session from Supabase Auth
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (token) {
-          // In a real app, you would validate the token with your API
-          // For now, we'll simulate a successful auth with mock data
-          setProfile({
-            id: '1',
-            name: 'John Doe',
-            email: 'john@example.com',
-          });
+        if (session?.user) {
+          // Get the user profile from the profiles table
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            setProfile({
+              id: session.user.id,
+              name: profileData.full_name || 'User',
+              email: session.user.email || '',
+              avatarUrl: profileData.avatar_url,
+            });
+          } else {
+            setProfile({
+              id: session.user.id,
+              name: 'User',
+              email: session.user.email || '',
+            });
+          }
         }
       } catch (error) {
         console.error('Authentication check failed:', error);
@@ -50,62 +70,118 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          // Get the user profile from the profiles table
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            setProfile({
+              id: session.user.id,
+              name: profileData.full_name || 'User',
+              email: session.user.email || '',
+              avatarUrl: profileData.avatar_url,
+            });
+          } else {
+            setProfile({
+              id: session.user.id,
+              name: 'User',
+              email: session.user.email || '',
+            });
+          }
+        } else {
+          setProfile(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // This would be your API call to sign in
-      // For now, we'll simulate a successful sign-in with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful authentication
-      localStorage.setItem('auth_token', 'mock_token');
-      setProfile({
-        id: '1',
-        name: 'John Doe',
-        email: email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
       
-      setIsLoading(false);
-      return true;
+      if (error) throw error;
+      
+      if (data.user) {
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Sign in failed:', error);
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signUp = async (name: string, email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // This would be your API call to register a new user
-      // For now, we'll simulate a successful registration with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful registration and auto sign-in
-      localStorage.setItem('auth_token', 'mock_token');
-      setProfile({
-        id: '1',
-        name: name,
-        email: email,
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+        },
       });
       
-      setIsLoading(false);
-      return true;
+      if (error) throw error;
+      
+      if (data.user) {
+        // Create a profile entry in the profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              full_name: name,
+              email: email,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ]);
+        
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+        
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Sign up failed:', error);
-      setIsLoading(false);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      // This would be your API call to sign out
-      // For now, we'll just remove the token from local storage
-      localStorage.removeItem('auth_token');
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
       setProfile(null);
       router.push('/login');
     } catch (error) {
