@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 interface Profile {
   id: string;
@@ -20,11 +20,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-// Create Supabase client directly in this file to avoid circular dependencies
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -40,27 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          // Get the user profile from the profiles table
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profileData) {
-            setProfile({
-              id: session.user.id,
-              name: profileData.full_name || 'User',
-              email: session.user.email || '',
-              avatarUrl: profileData.avatar_url,
-            });
-          } else {
-            setProfile({
-              id: session.user.id,
-              name: 'User',
-              email: session.user.email || '',
-            });
-          }
+          setProfile({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || 'User',
+            email: session.user.email || '',
+          });
         }
       } catch (error) {
         console.error('Authentication check failed:', error);
@@ -75,27 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          // Get the user profile from the profiles table
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profileData) {
-            setProfile({
-              id: session.user.id,
-              name: profileData.full_name || 'User',
-              email: session.user.email || '',
-              avatarUrl: profileData.avatar_url,
-            });
-          } else {
-            setProfile({
-              id: session.user.id,
-              name: 'User',
-              email: session.user.email || '',
-            });
-          }
+          setProfile({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || 'User',
+            email: session.user.email || '',
+          });
         } else {
           setProfile(null);
         }
@@ -147,23 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       
       if (data.user) {
-        // Create a profile entry in the profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              full_name: name,
-              email: email,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ]);
-        
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-        }
-        
         return true;
       }
       
