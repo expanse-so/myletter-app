@@ -1,75 +1,86 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { createClient } from '@supabase/supabase-js';
 
-// Define validation schema
-const subscriptionSchema = z.object({
-  newsletter_id: z.string().min(1, 'Newsletter ID is required'),
-  email: z.string().email('Invalid email format'),
-  name: z.string().optional(),
+// Create Supabase client directly in this file to avoid circular dependencies
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Schema for validating the request body
+const subscribeSchema = z.object({
+  newsletter_id: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string().min(1).max(100).optional(),
 });
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // Parse request body
+    // Parse the request body
     const body = await request.json();
     
-    // Validate request data
-    const validationResult = subscriptionSchema.safeParse(body);
-    
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing required fields or invalid data',
-          details: validationResult.error.issues
-        },
-        { status: 400 }
-      );
+    // Validate the request body
+    const validation = subscribeSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Invalid request data',
+        details: validation.error.errors
+      }, { status: 400 });
     }
     
-    const { newsletter_id, email, name } = validationResult.data;
+    const { newsletter_id, email, name } = validation.data;
     
-    // Insert subscriber to database
+    // Check if the user is already subscribed
+    const { data: existingSubscriber } = await supabase
+      .from('subscribers')
+      .select('*')
+      .eq('newsletter_id', newsletter_id)
+      .eq('email', email)
+      .single();
+      
+    if (existingSubscriber) {
+      // User is already subscribed
+      return NextResponse.json({ 
+        success: true, 
+        data: existingSubscriber,
+        message: 'Already subscribed' 
+      });
+    }
+    
+    // Add the new subscriber
     const { data, error } = await supabase
       .from('subscribers')
-      .insert({
-        newsletter_id,
-        email,
-        name: name || null,
-        status: 'active',
-      })
+      .insert([
+        {
+          newsletter_id,
+          email,
+          name: name || null,
+          status: 'active',
+          created_at: new Date().toISOString(),
+        }
+      ])
       .select()
       .single();
-    
+      
     if (error) {
-      // Check for duplicate subscription
-      if (error.code === '23505') {
-        return NextResponse.json(
-          { success: false, error: 'Email already subscribed' },
-          { status: 409 }
-        );
-      }
-      
       console.error('Error subscribing:', error);
-      
-      return NextResponse.json(
-        { success: false, error: `Error subscribing: ${error.message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to subscribe' 
+      }, { status: 500 });
     }
     
-    return NextResponse.json(
-      { success: true, data },
-      { status: 201 }
-    );
-    
+    return NextResponse.json({ 
+      success: true, 
+      data,
+      message: 'Successfully subscribed'
+    });
   } catch (error) {
-    console.error('Unexpected error:', error);
-    
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Subscription error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Server error'
+    }, { status: 500 });
   }
 }
