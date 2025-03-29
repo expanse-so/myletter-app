@@ -34,6 +34,9 @@ vi.mock('@/lib/supabase', () => ({
   },
 }));
 
+// Explicitly import and reference Supabase to avoid circular dependency issues
+const { supabase } = await import('@/lib/supabase');
+
 describe('Subscribers API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -264,6 +267,3 @@ describe('Subscribers API', () => {
     });
   });
 });
-
-// Helper for TypeScript to recognize the mocked supabase object
-const { supabase } = await import('@/lib/supabase');
