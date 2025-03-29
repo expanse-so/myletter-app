@@ -1,26 +1,26 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NewsletterSave } from './newsletter-save';
 
-// Mock variable for createClient
-const createClient = vi.fn();
-
-// Mock Supabase client
-vi.mock('@/lib/supabase', () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      upsert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(),
-          single: vi.fn(() => ({
-            data: { id: '123', title: 'Test Newsletter', content: '<p>Test content</p>' },
-            error: null
+// Mock supabase-js instead of the local import
+vi.mock('@supabase/supabase-js', () => {
+  return {
+    createClient: vi.fn(() => ({
+      from: vi.fn(() => ({
+        upsert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            eq: vi.fn(),
+            single: vi.fn(() => ({
+              data: { id: '123', title: 'Test Newsletter', content: '<p>Test content</p>' },
+              error: null
+            }))
           }))
         }))
-      }))
-    })),
-  }))
-}));
+      })),
+    }))
+  };
+});
 
 describe('NewsletterSave Component', () => {
   const mockContent = '<p>This is a test newsletter content.</p>';
@@ -78,7 +78,8 @@ describe('NewsletterSave Component', () => {
 
   it('shows error message when save fails', async () => {
     // Override the mock to return an error
-    vi.mocked(createClient).mockImplementationOnce(() => ({
+    const createClientMock = vi.requireMock('@supabase/supabase-js').createClient;
+    createClientMock.mockImplementationOnce(() => ({
       from: vi.fn(() => ({
         upsert: vi.fn(() => ({
           select: vi.fn(() => ({
