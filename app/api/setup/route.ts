@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase";
+import { getServiceSupabase } from "../../../lib/supabase";
 
 export async function GET(req: Request) {
   try {
@@ -41,31 +41,8 @@ export async function GET(req: Request) {
     
     // If the profiles table doesn't exist, create it
     if (!data || data.length === 0) {
-      // Create profiles table using raw SQL
-      const { error: createError } = await supabase.query(`
-        CREATE TABLE IF NOT EXISTS profiles (
-          id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
-          email TEXT UNIQUE NOT NULL,
-          full_name TEXT,
-          avatar_url TEXT,
-          updated_at TIMESTAMP WITH TIME ZONE,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-        );
-        
-        ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-        
-        CREATE POLICY "Users can view their own profile"
-          ON profiles FOR SELECT
-          USING (auth.uid() = id);
-          
-        CREATE POLICY "Users can update their own profile"
-          ON profiles FOR UPDATE
-          USING (auth.uid() = id);
-          
-        CREATE POLICY "Users can insert their own profile"
-          ON profiles FOR INSERT
-          WITH CHECK (auth.uid() = id);
-      `);
+      // Create profiles table using rpc instead of query
+      const { error: createError } = await supabase.rpc('setup_profiles_table');
       
       if (createError) {
         return NextResponse.json(
