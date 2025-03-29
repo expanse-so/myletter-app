@@ -1,54 +1,24 @@
-export type Profile = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
+import { Database } from '@/lib/supabase';
+
+// Export types from database
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Newsletter = Database['public']['Tables']['newsletters']['Row'];
+export type Subscriber = Database['public']['Tables']['subscribers']['Row'];
+export type NewsletterContent = Database['public']['Tables']['newsletter_content']['Row'];
+
+// Additional types for state management
+export type NewsletterWithCounts = Newsletter & {
+  subscriber_count: number;
+  sent_count: number;
 };
 
-export type Newsletter = {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
+export type SubscriberWithNewsletter = Subscriber & {
+  newsletter: {
+    title: string;
+  };
 };
 
-export type Letter = {
-  id: string;
-  newsletter_id: string;
-  title: string;
-  content: Record<string, any>;
-  status: 'draft' | 'sent';
-  sent_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Subscriber = {
-  id: string;
-  newsletter_id: string;
-  email: string;
-  name: string | null;
-  status: 'active' | 'unsubscribed';
-  created_at: string;
-  updated_at: string;
-};
-
-export type AiChatMessage = {
-  id: string;
-  letter_id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  created_at: string;
-};
-
-export type Database = {
-  profiles: Profile;
-  newsletters: Newsletter;
-  letters: Letter;
-  subscribers: Subscriber;
-  ai_chat_messages: AiChatMessage;
+export type NewsletterContentWithCounts = NewsletterContent & {
+  open_count: number;
+  click_count: number;
 };
