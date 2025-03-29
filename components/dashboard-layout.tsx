@@ -7,7 +7,7 @@ import {
   LayoutDashboard, 
   Mail, 
   Menu, 
-  Search, 
+  Users, 
   Settings, 
   User, 
   X,
@@ -78,7 +78,7 @@ export function DashboardLayout({
               <Link href="/newsletters" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Newsletters
               </Link>
-              <Link href="/subscribers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link href="/dashboard/subscribers" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Subscribers
               </Link>
               <Link href="/settings" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
@@ -133,11 +133,11 @@ export function DashboardLayout({
               <span className="text-muted-foreground">Newsletters</span>
             </Link>
             <Link 
-              href="/subscribers" 
+              href="/dashboard/subscribers" 
               className="flex items-center gap-3 p-2 rounded-md hover:bg-accent"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <Search className="h-5 w-5 text-muted-foreground" />
+              <Users className="h-5 w-5 text-muted-foreground" />
               <span className="text-muted-foreground">Subscribers</span>
             </Link>
             <Link 
