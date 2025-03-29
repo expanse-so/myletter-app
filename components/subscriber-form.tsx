@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, User, LoaderCircle } from 'lucide-react';
+import { Mail, User, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@supabase/supabase-js';
 
@@ -132,7 +132,7 @@ export function SubscriberForm({
           </span>
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <LoaderCircle className="animate-spin" size={16} strokeWidth={2} aria-hidden="true" />
+              <Loader2 className="animate-spin" size={16} strokeWidth={2} aria-hidden="true" />
             </div>
           )}
         </Button>
