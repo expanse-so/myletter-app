@@ -1,18 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
-import { Newsletter } from '@/types/database';
-import { useAuth } from '@/contexts/auth-context';
+import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../contexts/auth-context';
 
 export default function SubscribersPage() {
   const { isAuthenticated, profile } = useAuth();
-  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
-  const [selectedNewsletterId, setSelectedNewsletterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('list');
+  const [newsletters, setNewsletters] = useState([]);
+  const [selectedNewsletterId, setSelectedNewsletterId] = useState(null);
+  const [activeTab, setActiveTab] = useState('list');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   // Fetch newsletters to populate the selection dropdown
   useEffect(() => {
@@ -131,8 +129,18 @@ export default function SubscribersPage() {
       {selectedNewsletterId && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
-            <Button onClick={() => setActiveTab('list')}>Subscribers List</Button>
-            <Button onClick={() => setActiveTab('add')}>Add Subscriber</Button>
+            <button 
+              onClick={() => setActiveTab('list')}
+              className="py-2 px-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+            >
+              Subscribers List
+            </button>
+            <button 
+              onClick={() => setActiveTab('add')}
+              className="py-2 px-4 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+            >
+              Add Subscriber
+            </button>
           </div>
           
           <div className="p-4 border rounded-md">
