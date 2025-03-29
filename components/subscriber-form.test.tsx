@@ -1,7 +1,7 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { SubscriberForm } from './subscriber-form';
-import { supabase } from '@/lib/supabase';
 
 // Mock Supabase
 vi.mock('@/lib/supabase', () => ({
@@ -15,6 +15,10 @@ vi.mock('@/lib/supabase', () => ({
 }));
 
 describe('SubscriberForm Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should render form fields correctly', () => {
     render(<SubscriberForm newsletterId="123" />);
     
@@ -49,7 +53,7 @@ describe('SubscriberForm Component', () => {
       error: null,
     });
     
-    supabase.from().insert.mockReturnValue({
+    vi.mocked(supabase.from().insert).mockReturnValue({
       select: () => mockInsert(),
     });
     
@@ -81,7 +85,7 @@ describe('SubscriberForm Component', () => {
       error: { message: 'Error subscribing' },
     });
     
-    supabase.from().insert.mockReturnValue({
+    vi.mocked(supabase.from().insert).mockReturnValue({
       select: () => mockInsert(),
     });
     
@@ -98,3 +102,6 @@ describe('SubscriberForm Component', () => {
     });
   });
 });
+
+// Helper for TypeScript to recognize the mocked supabase object
+const { supabase } = await import('@/lib/supabase');
